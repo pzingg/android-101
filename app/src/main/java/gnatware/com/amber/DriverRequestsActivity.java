@@ -11,6 +11,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.parse.ParseUser;
 
 public class DriverRequestsActivity extends AppCompatActivity implements LocationListener {
@@ -22,13 +23,14 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     private RequestsAdapter mRequestsAdapter;
 
     public void updateLocationResults(Location location) {
-        if (location != null) {
-            mCurrentLatitude = location.getLatitude();
-            mCurrentLongitude = location.getLongitude();
+        LatLng latLng = (location != null) ?
+                new LatLng(location.getLatitude(), location.getLongitude()) :
+                new LatLng(-34, 151);
 
-            Log.d("DriverActivity", "Location is now " + location.toString());
-            mRequestsAdapter.setDriverLocation(mCurrentLatitude, mCurrentLongitude);
-        }
+        Log.d("DriverActivity", "Location is now " + latLng.toString());
+        mCurrentLatitude = latLng.latitude;
+        mCurrentLongitude = latLng.longitude;
+        mRequestsAdapter.setDriverLocation(mCurrentLatitude, mCurrentLongitude);
     }
 
     @Override

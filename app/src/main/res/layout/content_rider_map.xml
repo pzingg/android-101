@@ -16,27 +16,4 @@
     android:layout_height="match_parent"
     tools:context=".RiderMapActivity" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Request Amber"
-        android:id="@+id/btnRequestOrCancel"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="24dp"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="18dp"
-        android:onClick="onRequestOrCancelClicked" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Your Amber is on its way..."
-        android:id="@+id/txtStatus"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="30dp"
-        android:layout_alignParentStart="true"
-        android:layout_marginStart="18dp"
-        android:textColor="#212121" />
-
 </RelativeLayout>

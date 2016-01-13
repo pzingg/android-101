@@ -6,11 +6,12 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -34,8 +35,7 @@ import java.util.List;
 public class RiderMapActivity extends AppCompatActivity implements LocationListener, OnMapReadyCallback {
 
     // Dynamic UI elements
-    private Button mBtnRequestOrCancel;
-    private TextView mTxtStatus;
+    private FloatingActionButton mFab;
 
     // Current rider request status
     private Boolean mRequestPending;
@@ -153,12 +153,21 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
 
     protected void updateRequestPending(String status) {
         if (mRequestPending) {
-            mTxtStatus.setText(status != null ? status : "Finding an Amber driver...");
-            mBtnRequestOrCancel.setText("Cancel Amber");
+            Log.d("RiderMapActivity", "UI set to request pending");
+            mFab.setImageResource(R.mipmap.cancel);
+            if (status == null) {
+                status = "Finding a driver.  Click to cancel.";
+            }
         } else {
-            mTxtStatus.setText("Click to request...");
-            mBtnRequestOrCancel.setText(status != null ? status : "Request Amber");
+            Log.d("RiderMapActivity", "UI reset to NO request pending");
+            mFab.setImageResource(R.mipmap.car);
+            if (status == null) {
+                status = "Click to request a driver...";
+            }
         }
+        CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.map_layout);
+        Snackbar snackbar = Snackbar.make(coordinatorLayout, status, Snackbar.LENGTH_LONG);
+        snackbar.show();
     }
 
     protected void checkPendingRequest(final String status) {
@@ -196,15 +205,6 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
         Log.d("RiderMapActivity", "Cannot check pending request: No anonymous user");
     }
 
-    public void onRequestOrCancelClicked(View view) {
-        Log.d("RiderMapActivity", "Button clicked");
-        if (mRequestPending) {
-            cancelRequest();
-        } else {
-            submitRequest();
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -222,8 +222,19 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
         mapFragment.getMapAsync(this);
 
         mRequestPending = false;
-        mBtnRequestOrCancel = (Button) findViewById(R.id.btnRequestOrCancel);
-        mTxtStatus = (TextView) findViewById(R.id.txtStatus);
+        mFab = (FloatingActionButton)findViewById(R.id.fab);
+        mFab.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Log.d("RiderMapActivity", "FAB clicked");
+                if (mRequestPending) {
+                    cancelRequest();
+                } else {
+                    submitRequest();
+                }
+            }
+        });
 
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         mProvider = mLocationManager.getBestProvider(new Criteria(), false);
