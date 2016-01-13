@@ -22,11 +22,13 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     private RequestsAdapter mRequestsAdapter;
 
     public void updateLocationResults(Location location) {
-        mCurrentLatitude = location.getLatitude();
-        mCurrentLongitude = location.getLongitude();
+        if (location != null) {
+            mCurrentLatitude = location.getLatitude();
+            mCurrentLongitude = location.getLongitude();
 
-        Log.d("DriverActivity", "Location is now " + location.toString());
-        mRequestsAdapter.setDriverLocation(mCurrentLatitude, mCurrentLongitude);
+            Log.d("DriverActivity", "Location is now " + location.toString());
+            mRequestsAdapter.setDriverLocation(mCurrentLatitude, mCurrentLongitude);
+        }
     }
 
     @Override
