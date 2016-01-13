@@ -16,7 +16,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/swRiderOrDriver"
-        android:layout_alignTop="@+id/txtRider"
+        android:layout_marginBottom="36dp"
+        android:layout_above="@+id/btnGetStarted"
         android:layout_centerHorizontal="true" />
 
     <TextView
@@ -25,11 +26,10 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Rider"
         android:id="@+id/txtRider"
+        android:layout_alignTop="@+id/swRiderOrDriver"
         android:textAlignment="textEnd"
         android:layout_marginEnd="18dp"
         android:layout_toStartOf="@+id/swRiderOrDriver"
-        android:layout_marginBottom="36dp"
-        android:layout_above="@+id/btnGetStarted"
         android:textSize="20sp" />
 
     <TextView
@@ -38,10 +38,9 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Driver"
         android:id="@+id/txtDriver"
+        android:layout_alignTop="@+id/swRiderOrDriver"
         android:layout_marginStart="18dp"
         android:layout_toEndOf="@+id/swRiderOrDriver"
-        android:layout_marginBottom="36dp"
-        android:layout_above="@+id/btnGetStarted"
         android:textSize="20sp" />
 
     <Button

@@ -155,12 +155,14 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
         if (mRequestPending) {
             Log.d("RiderMapActivity", "UI set to request pending");
             mFab.setImageResource(R.mipmap.cancel);
+            mFab.setContentDescription("Cancel your request");
             if (status == null) {
                 status = "Finding a driver.  Click to cancel.";
             }
         } else {
             Log.d("RiderMapActivity", "UI reset to NO request pending");
             mFab.setImageResource(R.mipmap.car);
+            mFab.setContentDescription("Request a driver");
             if (status == null) {
                 status = "Click to request a driver...";
             }

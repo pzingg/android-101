@@ -26,6 +26,7 @@
         android:layout_margin="16dp"
         android:clickable="true"
         android:src="@mipmap/car"
+        android:contentDescription="Request a driver"
         app:layout_anchor="@id/map_view"
         app:layout_anchorGravity="bottom|right|end"/>
 </android.support.design.widget.CoordinatorLayout>
