@@ -38,7 +38,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
     private FloatingActionButton mFab;
 
     // Current rider request status
-    private Boolean mRequestPending;
+    private Boolean mRequestActive;
 
     // Location and map updates
     private GoogleMap mMap;
@@ -90,7 +90,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                             Log.d("RiderMapActivity", "Error submitting request: " + e.getMessage());
                             status = "Error sending request!";
                         } else {
-                            mRequestPending = true;
+                            mRequestActive = true;
                         }
                         updateRequestPending(status);
                     }
@@ -121,7 +121,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                             updateRequestPending("Error canceling request");
                         } else {
                             if (objects.isEmpty()) {
-                                mRequestPending = false;
+                                mRequestActive = false;
                                 Log.d("RiderMapActivity", "Error canceling request: No pending requests");
                                 updateRequestPending("No pending requests");
                             } else {
@@ -136,7 +136,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                                             Log.d("RiderMapActivity", "Error deleting requests: " + e2.getMessage());
                                             status = "Error deleting requests";
                                         } else {
-                                            mRequestPending = false;
+                                            mRequestActive = false;
                                         }
                                         updateRequestPending(status);
                                     }
@@ -152,7 +152,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
     }
 
     protected void updateRequestPending(String status) {
-        if (mRequestPending) {
+        if (mRequestActive) {
             Log.d("RiderMapActivity", "UI set to request pending");
             mFab.setImageResource(R.mipmap.cancel);
             mFab.setContentDescription("Cancel your request");
@@ -193,9 +193,9 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                             Log.d("RiderMapActivity", "User " + requesterId + "  has " +
                                     Integer.toString(count) + " pending request(s)");
                             if (count > 0) {
-                                mRequestPending = true;
+                                mRequestActive = true;
                             } else {
-                                mRequestPending = false;
+                                mRequestActive = false;
                             }
                         }
                         updateRequestPending(status);
@@ -223,14 +223,14 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        mRequestPending = false;
+        mRequestActive = false;
         mFab = (FloatingActionButton)findViewById(R.id.fab);
         mFab.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
                 Log.d("RiderMapActivity", "FAB clicked");
-                if (mRequestPending) {
+                if (mRequestActive) {
                     cancelRequest();
                 } else {
                     submitRequest();
