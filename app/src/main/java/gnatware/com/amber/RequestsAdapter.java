@@ -1,6 +1,7 @@
 package gnatware.com.amber;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,14 +25,17 @@ import java.util.List;
  */
 public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHolder> {
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder
+            implements View.OnClickListener {
 
         // Private member variables accessible from RequestsAdapter
         private TextView mTxtRequesterId;
         private TextView mTxtPickupDistance;
+        private RiderRequest mRequest;
 
         public ViewHolder(View itemView) {
             super(itemView);
+            itemView.setOnClickListener(this);
 
             mTxtRequesterId = (TextView) itemView.findViewById(R.id.txtRequesterId);
             mTxtPickupDistance = (TextView) itemView.findViewById(R.id.txtPickupDistance);
@@ -39,10 +43,31 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
         // Set item view based on the data model
         public void bind(RiderRequest request) {
+
+            // Save information for click handler
+            mRequest = request;
+
+            // Set up the sub views (user and distance)
             mTxtRequesterId.setText(request.requesterId);
             double distance = request.getPickupDistance();
             String strDistance = new DecimalFormat("0.# miles").format(distance);
             mTxtPickupDistance.setText(strDistance);
+        }
+
+        @Override
+        public void onClick(View view) {
+            Context context = view.getContext();
+
+            // Do something with the rider request
+            Log.d("RequestsAdapter", "onClick for " + mRequest.objectId);
+            Intent driverMapIntent = new Intent(context, DriverMapActivity.class);
+            driverMapIntent.putExtra("requestId", mRequest.objectId);
+            driverMapIntent.putExtra("requesterId", mRequest.requesterId);
+            driverMapIntent.putExtra("pickupLatitude", mRequest.pickupLocation.getLatitude());
+            driverMapIntent.putExtra("pickupLongitude", mRequest.pickupLocation.getLongitude());
+            driverMapIntent.putExtra("driverLatitude", mRequest.driverLocation.getLatitude());
+            driverMapIntent.putExtra("driverLongitude", mRequest.driverLocation.getLongitude());
+            context.startActivity(driverMapIntent);
         }
     }
 
@@ -79,6 +104,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                     mRequests.clear();
                     for (ParseObject request : objects) {
                         mRequests.add(new RiderRequest(
+                                request.getObjectId(),
                                 request.getString("requesterId"),
                                 request.getParseGeoPoint("pickupLocation"),
                                 mDriverLocation));
@@ -119,4 +145,6 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         Log.d("RequestsAdapter", "getItemCount returning " + Integer.toString(count));
         return count;
     }
+
+
 }

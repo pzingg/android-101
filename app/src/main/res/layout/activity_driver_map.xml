@@ -3,30 +3,30 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/rider_map_layout"
+    android:id="@+id/driver_map_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    tools:context=".RiderMapActivity">
+    tools:context=".DriverMapActivity">
 
     <LinearLayout
-        android:id="@+id/rider_map_view"
+        android:id="@+id/driver_map_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <include layout="@layout/content_rider_map" />
-
+        <include layout="@layout/content_driver_map" />
     </LinearLayout>
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/rider_map_fab"
+        android:id="@+id/driver_map_fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:clickable="true"
         android:src="@mipmap/car"
-        android:contentDescription="Request a driver"
-        app:layout_anchor="@id/rider_map_view"
+        android:contentDescription="Accept this request"
+        app:layout_anchor="@id/driver_map_view"
         app:layout_anchorGravity="bottom|right|end"/>
+
 </android.support.design.widget.CoordinatorLayout>

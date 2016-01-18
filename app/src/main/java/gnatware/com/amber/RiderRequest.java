@@ -7,12 +7,14 @@ import com.parse.ParseGeoPoint;
  */
 public class RiderRequest {
 
+    public String objectId;
     public String requesterId;
     public ParseGeoPoint pickupLocation;
     public ParseGeoPoint driverLocation;
 
-    public RiderRequest(String requesterId,
+    public RiderRequest(String objectId, String requesterId,
                         ParseGeoPoint pickupLocation, ParseGeoPoint driverLocation) {
+        this.objectId = objectId;
         this.requesterId = requesterId;
         this.pickupLocation = pickupLocation;
         this.driverLocation = driverLocation;

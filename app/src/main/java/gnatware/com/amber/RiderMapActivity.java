@@ -167,7 +167,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                 status = "Click to request a driver...";
             }
         }
-        CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.map_layout);
+        CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.rider_map_layout);
         Snackbar snackbar = Snackbar.make(coordinatorLayout, status, Snackbar.LENGTH_LONG);
         snackbar.show();
     }
@@ -217,14 +217,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
          */
-
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-
-        mRequestActive = false;
-        mFab = (FloatingActionButton)findViewById(R.id.fab);
+        mFab = (FloatingActionButton) findViewById(R.id.rider_map_fab);
         mFab.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -238,6 +231,12 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
             }
         });
 
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.rider_map);
+        mapFragment.getMapAsync(this);
+
+        mRequestActive = false;
         mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         mProvider = mLocationManager.getBestProvider(new Criteria(), false);
 
