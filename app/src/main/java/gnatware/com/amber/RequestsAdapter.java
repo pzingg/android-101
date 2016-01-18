@@ -86,6 +86,24 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         updateRequests();
     }
 
+    // For debugging purposes
+    public void cancelAcceptedRequests() {
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+        query.whereExists("driverId");
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> objects, ParseException e) {
+                for (ParseObject object : objects) {
+                    object.remove("driverId");
+                    object.remove("driverLat");
+                    object.remove("driverLng");
+                    object.remove("acceptedAt");
+                    object.saveInBackground();
+                }
+            }
+        });
+    }
+
     // Do an async Parse query and cache the results in the adapter's mRequests array
     public void updateRequests() {
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
@@ -141,10 +159,6 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     // Return the total count of items in our cached array
     @Override
     public int getItemCount() {
-        int count = mRequests.size();
-        Log.d("RequestsAdapter", "getItemCount returning " + Integer.toString(count));
-        return count;
+        return mRequests.size();
     }
-
-
 }

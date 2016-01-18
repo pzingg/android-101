@@ -19,3 +19,19 @@ Both properties files should contain API secrets for Parse and Google Maps:
     parse_app_id=...
     parse_client_key=...
     google_maps_key=...
+
+Simulating Locations in the Emulator
+------------------------------------
+Open a Terminal window. Then telnet to port 5554 and use "geo fix" command.
+NOTE: "geo fix" parameters are longitude first, latitude second!
+
+    $ telnet localhost 5554
+    Trying ::1...
+    telnet: connect to address ::1: Connection refused
+    Trying 127.0.0.1...
+    Connected to localhost.
+    Escape character is '^]'.
+    Android Console: type 'help' for a list of commands
+    OK
+    geo fix -122.547926 37.905996
+    OK

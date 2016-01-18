@@ -56,9 +56,12 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
         // Set up RecyclerView and its adapter
         RecyclerView rvRequests = (RecyclerView) findViewById(R.id.rvNearbyRequests);
 
-        // Cråeate adapter passing in the sample user data
+        // Create the adapter that interfaces with Parse API to bind data to the view
         ParseUser driver = ParseUser.getCurrentUser();
         mRequestsAdapter = new RequestsAdapter(driver);
+        if (BuildConfig.DEBUG) {
+            mRequestsAdapter.cancelAcceptedRequests();
+        }
         rvRequests.setAdapter(mRequestsAdapter);
 
         // Set layout manager to position the items

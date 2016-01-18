@@ -36,6 +36,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
 
     // Dynamic UI elements
     private FloatingActionButton mFab;
+    private CoordinatorLayout mLayout;
 
     // Current rider request status
     private Boolean mRequestActive;
@@ -167,8 +168,7 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
                 status = "Click to request a driver...";
             }
         }
-        CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.rider_map_layout);
-        Snackbar snackbar = Snackbar.make(coordinatorLayout, status, Snackbar.LENGTH_LONG);
+        Snackbar snackbar = Snackbar.make(mLayout, status, Snackbar.LENGTH_LONG);
         snackbar.show();
     }
 
@@ -210,7 +210,9 @@ public class RiderMapActivity extends AppCompatActivity implements LocationListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_rider_map);
+
+        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_rider_map, null);
+        setContentView(mLayout);
 
         /*
         // Action bar is supplied by theme in AndroidManifest.xml
