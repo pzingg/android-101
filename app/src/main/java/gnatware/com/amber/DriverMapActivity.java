@@ -125,11 +125,11 @@ public class DriverMapActivity extends AppCompatActivity implements
                             snackbar.show();
                             if (accepted) {
                                 DecimalFormat format = new DecimalFormat("0.######");
-                                String mapsUri = "https://www.google.com/maps/dir/" +
+                                String mapsUri = "https://maps.google.com/maps?saddr=" +
                                         format.format(mDriverLocation.latitude) + "," +
-                                        format.format(mDriverLocation.longitude) + "/" +
+                                        format.format(mDriverLocation.longitude) + "&daddr=" +
                                         format.format(mPickupLocation.latitude) + "," +
-                                        format.format(mPickupLocation.longitude) + "/";
+                                        format.format(mPickupLocation.longitude);
 
                                 // Start Google Maps activity
                                 Log.d("DriverMapActivity", "Starting maps intent with URI " + mapsUri);

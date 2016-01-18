@@ -20,6 +20,26 @@ Both properties files should contain API secrets for Parse and Google Maps:
     parse_client_key=...
     google_maps_key=...
 
+Floating Action Button Icons and Transformations
+------------------------------------------------
+Use Google icons from https://design.google.com/icons/
+Download drawable-anydpi-v21 xml files from https://github.com/google/material-design-icons/blob/master/
+
+Floating action button
+Interior icon: 24 x 24dp
+Floating action button circle: 56 x 56dp
+
+Mini floating action button
+Interior icon: 24 x 24dp
+Floating action button circle: 40 x 40dp
+
+The floating action button can transform into a toolbar upon press or appear from a toolbar
+that transforms into the floating action button upon scroll.  The toolbar can contain related
+actions, text and search fields, or any other items that would be useful at hand.
+
+Example of FAB animations here: https://github.com/Learn2Crack/android-fab-animations
+
+
 Simulating Locations in the Emulator
 ------------------------------------
 Open a Terminal window. Then telnet to port 5554 and use "geo fix" command.
