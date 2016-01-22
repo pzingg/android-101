@@ -24,6 +24,7 @@ Floating Action Button Icons and Transformations
 ------------------------------------------------
 Use Google icons from https://design.google.com/icons/
 Download drawable-anydpi-v21 xml files from https://github.com/google/material-design-icons/blob/master/
+Change fillColor attributes from black (#FF000000) to white (#FFFFFFFF).
 
 Floating action button
 Interior icon: 24 x 24dp
@@ -38,6 +39,7 @@ that transforms into the floating action button upon scroll.  The toolbar can co
 actions, text and search fields, or any other items that would be useful at hand.
 
 Example of FAB animations here: https://github.com/Learn2Crack/android-fab-animations
+More FAB info here: https://guides.codepath.com/android/floating-action-buttons
 
 
 Simulating Locations in the Emulator

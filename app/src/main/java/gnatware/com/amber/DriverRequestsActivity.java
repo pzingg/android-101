@@ -16,21 +16,24 @@ import com.parse.ParseUser;
 
 public class DriverRequestsActivity extends AppCompatActivity implements LocationListener {
 
-    private LocationManager mLocationManager;
-    private String mProvider;
-    private double mCurrentLatitude;
-    private double mCurrentLongitude;
+    public static final String TAG = "DriverRequestsActivity";
+
+    private AmberApplication mApplication;
     private RequestsAdapter mRequestsAdapter;
 
-    public void updateLocationResults(Location location) {
-        LatLng latLng = (location != null) ?
-                new LatLng(location.getLatitude(), location.getLongitude()) :
-                new LatLng(-34, 151);
+    private LatLng mDriverLocation;
 
-        Log.d("DriverActivity", "Location is now " + latLng.toString());
-        mCurrentLatitude = latLng.latitude;
-        mCurrentLongitude = latLng.longitude;
-        mRequestsAdapter.setDriverLocation(mCurrentLatitude, mCurrentLongitude);
+    protected void updateDriverLocation(Location location) {
+        if (location == null) {
+            location = mApplication.getLastKnownLocation();
+            if (location == null) {
+                Log.d(TAG, "No location");
+                return;
+            }
+        }
+        mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        mApplication.updateDriverLocation(mDriverLocation);
+        mRequestsAdapter.updateDriverLocation(mDriverLocation);
     }
 
     @Override
@@ -58,30 +61,26 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
 
         // Create the adapter that interfaces with Parse API to bind data to the view
         ParseUser driver = ParseUser.getCurrentUser();
-        mRequestsAdapter = new RequestsAdapter(driver);
-        if (BuildConfig.DEBUG) {
+        mRequestsAdapter = new RequestsAdapter(driver, this);
+        if (false) { // BuildConfig.DEBUG
             mRequestsAdapter.cancelAcceptedRequests();
         }
         rvRequests.setAdapter(mRequestsAdapter);
 
+
         // Set layout manager to position the items
         rvRequests.setLayoutManager(new LinearLayoutManager(this));
 
-        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        mProvider = mLocationManager.getBestProvider(new Criteria(), false);
-
-        // Updates every 400 ms, or 1 degree change
-        Log.d("DriverActivity", "onCreate: Requesting location updates with mProvider " + mProvider);
-        mLocationManager.requestLocationUpdates(mProvider, 400, 1, this);
-
-        Location location = mLocationManager.getLastKnownLocation(mProvider);
-        updateLocationResults(location);
+        mApplication = (AmberApplication) getApplication();
+        mApplication.requestLocationUpdates(this);
+        updateDriverLocation(null);
     }
 
     // LocationListener methods
     @Override
     public void onLocationChanged(Location location) {
-        updateLocationResults(location);
+
+        updateDriverLocation(location);
     }
 
     @Override

@@ -16,7 +16,9 @@ import com.parse.SaveCallback;
 
 public class MainActivity extends AppCompatActivity {
 
-    Switch mSwRiderOrDriver;
+    public static final String TAG = "MainActivity";
+    
+    private Switch mSwRiderOrDriver;
 
     protected void saveRole(final ParseUser user, final String role) {
 
@@ -26,9 +28,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void done(ParseException e) {
                 if (e != null) {
-                    Log.d("MainActivity", "User " + user.getObjectId() + " failed to save " + role + " role");
+                    Log.d(TAG, "User " + user.getObjectId() + " failed to save " + role + " role");
                 } else {
-                    Log.d("MainActivity", "User " + user.getObjectId() + " signed up as a " + role);
+                    Log.d(TAG, "User " + user.getObjectId() + " signed up as a " + role);
                     redirectRiderToLocationActivity();
                 }
             }
@@ -48,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void done(ParseUser newUser, ParseException e) {
                     if (e != null) {
-                        Log.d("MainActivity", "Anonymous login failed.");
+                        Log.d(TAG, "Anonymous login failed.");
                     } else {
                         saveRole(newUser, role);
                     }
@@ -63,21 +65,21 @@ public class MainActivity extends AppCompatActivity {
 
         ParseUser anonymousUser = ParseUser.getCurrentUser();
         if (anonymousUser == null) {
-            Log.d("MainActivity", "No current user");
+            Log.d(TAG, "No current user");
         } else {
             String role = anonymousUser.getString("role");
             if (role == null) {
-                Log.d("MainActivity", "No role defined for user " + anonymousUser.getObjectId());
+                Log.d(TAG, "No role defined for user " + anonymousUser.getObjectId());
             } else {
-                Log.d("MainActivity", "User " + anonymousUser.getObjectId() + " logged in as a " + role);
+                Log.d(TAG, "User " + anonymousUser.getObjectId() + " logged in as a " + role);
                 if (role == null) {
-                    Log.d("MainActivity", "No role defined for user " + anonymousUser.getObjectId());
+                    Log.d(TAG, "No role defined for user " + anonymousUser.getObjectId());
                 } else if (role.equals("rider")) {
-                    Log.d("MainActivity", "Starting rider map activity");
+                    Log.d(TAG, "Starting rider map activity");
                     Intent riderMapIntent = new Intent(getApplicationContext(), RiderMapActivity.class);
                     startActivity(riderMapIntent);
                 } else if (role.equals("driver")) {
-                    Log.d("MainActivity", "Starting driver requests activity");
+                    Log.d(TAG, "Starting driver requests activity");
                     Intent driverRequestsIntent = new Intent(getApplicationContext(), DriverRequestsActivity.class);
                     startActivity(driverRequestsIntent);
                 }

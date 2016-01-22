@@ -1,11 +1,12 @@
 package gnatware.com.amber;
 
 import android.content.Intent;
+import android.location.Location;
+import android.location.LocationListener;
 import android.net.Uri;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -24,7 +25,6 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.parse.GetCallback;
 import com.parse.ParseException;
-import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
@@ -34,8 +34,11 @@ import java.text.DecimalFormat;
 import java.util.Date;
 
 public class DriverMapActivity extends AppCompatActivity implements
-        ViewTreeObserver.OnGlobalLayoutListener, OnMapReadyCallback {
+        ViewTreeObserver.OnGlobalLayoutListener, LocationListener, OnMapReadyCallback {
 
+    public static final String TAG = "DriverMapActivity";
+
+    private AmberApplication mApplication;
     private FloatingActionButton mFab;
     private CoordinatorLayout mLayout;
 
@@ -47,16 +50,15 @@ public class DriverMapActivity extends AppCompatActivity implements
     private LatLng mPickupLocation;
     private LatLng mDriverLocation;
 
-    protected void updateMarkersAndCamera() {
+    protected void updateMap() {
         if (mMap == null) {
-            Log.d("DriverMapActivity", "no map");
+            Log.d(TAG, "No map");
         } else if (mRequesterId == null) {
-            Log.d("DriverMapActivity", "no requester");
+            Log.d(TAG, "No requester");
         } else if (!mLayoutComplete) {
-            Log.d("DriverMapActivity", "layout incomplete");
+            Log.d(TAG, "Layout incomplete");
         } else {
-            Log.d("DriverMapActivity", "locate map");
-
+            Log.d(TAG, "Center driver and rider on map");
             // Figure out a bounds and zoom level
             LatLngBounds.Builder builder = new LatLngBounds.Builder();
             Marker pickup = mMap.addMarker(new MarkerOptions()
@@ -72,9 +74,27 @@ public class DriverMapActivity extends AppCompatActivity implements
 
             // Error using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
             // Most likely, layout has not yet occured for the map view.
-            CameraUpdate update = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
+            View view = findViewById(R.id.driver_map_view);
+            int width = view.getWidth();
+            int height = view.getHeight();
+            if (height > 400) { height -= 200; } // Try to avoid FAB at bottom right of view?
+            LatLngBounds bounds = builder.build();
+            CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, width, height, 100);
             mMap.moveCamera(update);
         }
+    }
+
+    protected void updateDriverLocation(Location location) {
+        if (location == null) {
+            location = mApplication.getLastKnownLocation();
+            if (location == null) {
+                Log.d(TAG, "No location");
+                return;
+            }
+        }
+        mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        mApplication.updateDriverLocation(mDriverLocation);
+        updateMap();
     }
 
     protected void acceptRequest() {
@@ -96,7 +116,7 @@ public class DriverMapActivity extends AppCompatActivity implements
 
                     // Something failed, show message
                     // TODO: Go back to DriverRequestsActivity?
-                    Log.d("DriverMapActivity", message);
+                    Log.d(TAG, message);
                     Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
                     snackbar.show();
                 } else {
@@ -120,7 +140,7 @@ public class DriverMapActivity extends AppCompatActivity implements
                                 message = "Request " + mRequestId + " accepted";
                                 accepted = true;
                             }
-                            Log.d("DriverMapActivity", message);
+                            Log.d(TAG, message);
                             Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
                             snackbar.show();
                             if (accepted) {
@@ -132,11 +152,15 @@ public class DriverMapActivity extends AppCompatActivity implements
                                         format.format(mPickupLocation.longitude);
 
                                 // Start Google Maps activity
-                                Log.d("DriverMapActivity", "Starting maps intent with URI " + mapsUri);
-                                Intent mapsIntent = new Intent(android.content.Intent.ACTION_VIEW,
-                                        Uri.parse(mapsUri));
-                                mapsIntent.setPackage("com.google.android.apps.maps");
-                                startActivity(mapsIntent);
+                                // TODO: Fix GmsClient clearcut.service.START error on emulator
+                                // E/GmsClient: unable to connect to service: com.google.android.gms.clearcut.service.START
+                                Log.d(TAG, "Starting maps intent with URI " + mapsUri);
+                                if (!BuildConfig.DEBUG) {
+                                    Intent mapsIntent = new Intent(android.content.Intent.ACTION_VIEW,
+                                            Uri.parse(mapsUri));
+                                    mapsIntent.setPackage("com.google.android.apps.maps");
+                                    startActivity(mapsIntent);
+                                }
                             }
                         }
                     });
@@ -149,7 +173,7 @@ public class DriverMapActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.d("DriverMapActivity", "onCreate");
+        Log.d(TAG, "onCreate");
         mLayoutComplete = false;
 
         Intent intent = getIntent();
@@ -162,6 +186,8 @@ public class DriverMapActivity extends AppCompatActivity implements
         double driverLongitude = intent.getDoubleExtra("driverLongitude", 0.);
         mDriverLocation = new LatLng(driverLatitude, driverLongitude);
 
+        mApplication = (AmberApplication) getApplication();
+
         // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
         mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_driver_map, null);
         mLayout.getViewTreeObserver().addOnGlobalLayoutListener(this);
@@ -172,7 +198,7 @@ public class DriverMapActivity extends AppCompatActivity implements
 
             @Override
             public void onClick(View v) {
-                Log.d("DriverMapActivity", "FAB clicked");
+                Log.d(TAG, "FAB clicked");
                 acceptRequest();
             }
         });
@@ -182,16 +208,33 @@ public class DriverMapActivity extends AppCompatActivity implements
                 .findFragmentById(R.id.driver_map);
         mapFragment.getMapAsync(this);
 
-        updateMarkersAndCamera();
+        mApplication.requestLocationUpdates(this);
+        updateDriverLocation(null);
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+
+        mApplication.removeLocationUpdates(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        mApplication.requestLocationUpdates(this);
+        updateDriverLocation(null);
+    }
+
+    // ViewTreeObserver.OnGlobalLayoutListener method
+    @Override
     public void onGlobalLayout() {
-        Log.d("DriverMapActivity", "onGlobalLayout");
+        Log.d(TAG, "onGlobalLayout");
 
         // At this point, the UI is fully displayed
         mLayoutComplete = true;
-        updateMarkersAndCamera();
+        updateDriverLocation(null);
     }
 
 
@@ -206,9 +249,31 @@ public class DriverMapActivity extends AppCompatActivity implements
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
-        Log.d("DriverMapActivity", "onMapReady");
+        Log.d(TAG, "onMapReady");
         mMap = googleMap;
 
-        updateMarkersAndCamera();
+        updateDriverLocation(null);
     }
+
+    // LocationListener methods
+    @Override
+    public void onLocationChanged(Location location) {
+        updateDriverLocation(location);
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
 }
