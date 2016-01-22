@@ -42,7 +42,6 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
@@ -55,11 +54,19 @@
         <activity
             android:name=".DriverMapActivity"
             android:label="@string/title_activity_driver_map"/>
-
         <service
-            android:name=".ParseUserLocationService"
-            android:exported="false">
+            android:name=".RequestStatusService"
+            android:exported="true">
         </service>
+        <receiver
+            android:name=".RiderMapActivity$RequestStatusAlarmReceiver"
+            android:enabled="true"
+            android:exported="true">
+        </receiver>
+        <receiver
+            android:name=".RiderMapActivity$RequestStatusReceiver"
+            android:enabled="true"
+            android:exported="true">
+        </receiver>
     </application>
-
 </manifest>

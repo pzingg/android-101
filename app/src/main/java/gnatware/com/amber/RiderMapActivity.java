@@ -1,5 +1,11 @@
 package gnatware.com.amber;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Bundle;
@@ -8,6 +14,7 @@ import android.os.SystemClock;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -45,6 +52,9 @@ public class RiderMapActivity extends AppCompatActivity implements
     public static final Integer REQUEST_ASSIGNED = 2;
     
     private AmberApplication mApplication;
+    private RequestStatusReceiver mStatusReceiver;
+    private AlarmManager mAlarmMgr;
+    private PendingIntent mStatusAlarmIntent;
 
     // Dynamic UI elements
     private FloatingActionButton mFab;
@@ -54,23 +64,90 @@ public class RiderMapActivity extends AppCompatActivity implements
 
     // Current rider request status
     private int mRequestState;
+    private String mRequestId;
+    private String mDriverId;
+    private LatLng mDriverLocation;
 
     // Location and map updates
     private GoogleMap mMap;
     private LatLng mRiderLocation;
-    private LatLng mDriverLocation;
-    private String mDriverId;
+
+    // Handle the result of a scheduled 5 second alarm
+    public class RequestStatusAlarmReceiver extends BroadcastReceiver {
+        public RequestStatusAlarmReceiver() {
+        }
+
+
+        // This should be hit every 5 seconds
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (mRequestId != null) {
+                Log.d(TAG, "Alarm received; starting service for request " + mRequestId);
+
+                // Start a service ACTION that will be broadcast to our
+                // RequestStatusReceiver
+                RequestStatusService.startGetRequestStatus(RiderMapActivity.this, mRequestId);
+            } else {
+                Log.d(TAG, "Alarm received; nothing to do (no current request)");
+            }
+        }
+    }
+
+    // Handle the result of a getRequestStatus service
+    public class RequestStatusReceiver extends BroadcastReceiver {
+        public RequestStatusReceiver() {
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            // This method is called when the BroadcastReceiver is receiving
+            // an Intent broadcast.
+            int flags = intent.getIntExtra("flags", 0);
+            if (0 != (flags & RequestStatusService.RESULT_FLAG_ERROR)) {
+                Log.d(TAG, "Got error request status result");
+            } else {
+                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER_LOCATION)) {
+                    mDriverLocation = new LatLng(
+                            intent.getDoubleExtra("latitiude", 0.),
+                            intent.getDoubleExtra("longitude", 0.));
+                }
+                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER)) {
+                    mDriverId = intent.getStringExtra("driverId");
+                }
+            }
+        }
+    }
+
+    // Setup a recurring alarm every 5 seconds
+    public void scheduleRequestStatusAlarm() {
+        if (mAlarmMgr != null && mStatusAlarmIntent != null) {
+            Log.d(TAG, "Scheduling 5 second repeating alarm");
+            mAlarmMgr.setInexactRepeating(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    System.currentTimeMillis(), 5000, mStatusAlarmIntent);
+        }
+    }
+
+    // Cancel the pending intent
+    public void cancelRequestStatusAlarm() {
+        if (mAlarmMgr != null && mStatusAlarmIntent != null) {
+            Log.d(TAG, "Canceling 5 second repeating alarm");
+            mAlarmMgr.cancel(mStatusAlarmIntent);
+        }
+    }
 
     protected void updateMap() {
         if (mMap == null) {
             Log.d(TAG, "No map");
-        } else {
+        } else if (mRiderLocation != null) {
             mMap.clear();
             mMap.addMarker(new MarkerOptions()
                     .position(mRiderLocation)
                     .title("Your Location")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-            if (mDriverLocation != null) {
+            if (mDriverId != null && mDriverLocation != null) {
                 if (!mLayoutComplete) {
                     Log.d(TAG, "Layout incomplete");
                     // Fall through to center rider on map
@@ -114,36 +191,6 @@ public class RiderMapActivity extends AppCompatActivity implements
         }
         mRiderLocation = new LatLng(location.getLatitude(), location.getLongitude());
         updateMap();
-    }
-
-    protected void updateDriverLocation() {
-        if (mDriverId != null) {
-            ParseQuery<ParseUser> query = ParseUser.getQuery();
-            query.getInBackground(mDriverId, new GetCallback<ParseUser>() {
-
-                @Override
-                public void done(ParseUser object, ParseException e) {
-                    mDriverLocation = null;
-                    if (e != null) {
-                        Log.d(TAG, "Cannot get driver: " + e.getMessage());
-                    } else if (object == null) {
-                        Log.d(TAG, "Cannot get driver with id " + mDriverId);
-                    } else {
-                        ParseGeoPoint location = object.getParseGeoPoint("location");
-                        if (location == null) {
-                            Log.d(TAG, "Driver " + mDriverId + " has no location");
-                        } else {
-                            mDriverLocation = new LatLng(
-                                    location.getLatitude(), location.getLongitude());
-                        }
-                    }
-                    updateMap();
-                }
-            });
-        } else {
-            mDriverLocation = null;
-            updateMap();
-        }
     }
 
     protected void submitRequest() {
@@ -269,7 +316,7 @@ public class RiderMapActivity extends AppCompatActivity implements
                 ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
                 query.whereEqualTo("requesterId", requesterId);
 
-                Log.d(TAG, "Counting requests for user " + requesterId);
+                Log.d(TAG, "Querying for first request for user " + requesterId);
                 query.getFirstInBackground(new GetCallback<ParseObject>() {
 
                     @Override
@@ -278,6 +325,9 @@ public class RiderMapActivity extends AppCompatActivity implements
                             Log.d(TAG, "Cannot check pending request: " + e.getMessage());
                         } else {
                             if (object != null) {
+                                mRequestId = object.getObjectId();
+
+                                // Update state
                                 mDriverId = object.getString("driverId");
                                 if (mDriverId != null) {
                                     mRequestState = REQUEST_ASSIGNED;
@@ -285,11 +335,13 @@ public class RiderMapActivity extends AppCompatActivity implements
                                     mRequestState = REQUEST_ACTIVE;
                                 }
                             } else {
+
+                                // Update state
+                                mRequestId = null;
                                 mDriverId = null;
                                 mRequestState = REQUEST_NONE;
                             }
                             updateRequestPending(status);
-                            updateDriverLocation();
                         }
                     }
                 });
@@ -307,6 +359,16 @@ public class RiderMapActivity extends AppCompatActivity implements
 
         mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_rider_map, null);
         setContentView(mLayout);
+
+        mStatusReceiver = new RequestStatusReceiver();
+
+        mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        // Create the pending intent from our receiver
+        // requestCode = 0
+        // flags = 0
+        Intent intent = new Intent(this, RequestStatusAlarmReceiver.class);
+        mStatusAlarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
 
         /*
         // Action bar is supplied by theme in AndroidManifest.xml
@@ -346,16 +408,25 @@ public class RiderMapActivity extends AppCompatActivity implements
         super.onPause();
 
         mApplication.removeLocationUpdates(this);
+
+        cancelRequestStatusAlarm();
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        checkPendingRequest(null);
-
         mApplication.requestLocationUpdates(this);
 
+        // Register for the request status broadcast based on ACTION string
+        IntentFilter filter = new IntentFilter(RequestStatusService.ACTION_GET_REQUEST_STATUS);
+        LocalBroadcastManager.getInstance(this).registerReceiver(mStatusReceiver, filter);
+
+        scheduleRequestStatusAlarm();
+
+        checkPendingRequest(null);
         updateRiderLocation(null);
     }
 
