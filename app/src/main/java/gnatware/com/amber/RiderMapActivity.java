@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
@@ -14,6 +15,7 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -507,9 +509,26 @@ public class RiderMapActivity extends AppCompatActivity implements
     }
 
     private void signUpUser() {
-        ParseLoginBuilder builder = new ParseLoginBuilder(this);
-        builder.setParseLoginButtonText("Log in as another user");
-        startActivityForResult(builder.build(), 0);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.user_signup_required_message)
+                .setTitle(R.string.user_signup_required_title)
+                .setPositiveButton(R.string.com_parse_ui_create_account_button_label, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // User clicked OK button
+
+                        ParseLoginBuilder builder = new ParseLoginBuilder(RiderMapActivity.this);
+                        builder.setParseLoginButtonText("Log in?");
+                        startActivityForResult(builder.build(), 0);
+                    }
+                })
+                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // User cancelled the dialog
+
+                        showSnack("Request was not posted");
+                    }
+                });
+        AlertDialog dialog = builder.create();
     }
 
     private void logInUser() {
