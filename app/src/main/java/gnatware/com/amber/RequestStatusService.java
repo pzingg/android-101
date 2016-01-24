@@ -86,7 +86,7 @@ public class RequestStatusService extends IntentService {
         Log.d(TAG, "getRequestStatus for request " + requestId);
 
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-        query.whereEqualTo("object", requestId);
+        query.whereEqualTo("objectId", requestId);
         query.include("requester");
         query.include("driver");
         performQueryAndSendResult(query, ACTION_GET_REQUEST_STATUS);

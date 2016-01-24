@@ -56,7 +56,6 @@ public class DriverMapActivity extends AppCompatActivity implements
         Log.d(TAG, "onCreate");
 
         initializeState();
-        updateDriverLocation(null);
     }
 
     @Override
@@ -216,15 +215,17 @@ public class DriverMapActivity extends AppCompatActivity implements
         query.getInBackground(mRequestId, new GetCallback<ParseObject>() {
 
             @Override
-            public void done(ParseObject object, ParseException e1) {
+            public void done(ParseObject request, ParseException e1) {
                 String message = null;
                 if (e1 != null) {
                     message = "An error occured fetching request " +
                             mRequestId + ": " + e1.getMessage();
-                } else if (object == null) {
+                } else if (request == null) {
                     message = "Request " + mRequestId + " no longer exists";
-                } else if (object.getParseUser("driver") != null) {
+                } else if (request.getParseUser("driver") != null) {
                     message = "Request " + mRequestId + " has been accepted by another driver";
+                } else if (request.getDate("canceledAt") != null) {
+                    message = "Request " + mRequestId + " has been canceled by requester";
                 }
                 if (message != null) {
 
@@ -237,11 +238,11 @@ public class DriverMapActivity extends AppCompatActivity implements
 
                     // Request still available, book it and show directions
                     ParseUser driver = ParseUser.getCurrentUser();
-                    object.put("driver", driver);
-                    object.put("driverLat", mDriverLocation.latitude);
-                    object.put("driverLng", mDriverLocation.longitude);
-                    object.put("acceptedAt", new Date());
-                    object.saveInBackground(new SaveCallback() {
+                    request.put("driver", driver);
+                    request.put("driverLat", mDriverLocation.latitude);
+                    request.put("driverLng", mDriverLocation.longitude);
+                    request.put("acceptedAt", new Date());
+                    request.saveInBackground(new SaveCallback() {
 
                         @Override
                         public void done(ParseException e2) {

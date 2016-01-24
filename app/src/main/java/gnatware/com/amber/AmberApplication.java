@@ -9,12 +9,18 @@ import android.location.LocationManager;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.parse.FindCallback;
 import com.parse.Parse;
 import com.parse.ParseACL;
+import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
+import com.parse.ParseObject;
+import com.parse.ParseQuery;
 import com.parse.ParseUser;
+import com.parse.SaveCallback;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by pzingg on 1/9/16.
@@ -107,5 +113,29 @@ public class AmberApplication extends Application {
         } else {
             Log.d(TAG, "updateDriverLocation: Current user is not a driver");
         }
+    }
+
+    // For debugging purposes
+    public void cancelAllActiveRequests() {
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+        query.whereDoesNotExist("canceledAt");
+        query.whereExists("driver");
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> requests, ParseException e) {
+                Date now = new Date();
+                for (ParseObject request : requests) {
+                    final String requestId = request.getObjectId();
+                    request.put("canceledAt", now);
+                    request.put("cancellationReason", "Debugging");
+                    request.saveInBackground(new SaveCallback() {
+                        @Override
+                        public void done(ParseException e) {
+                            Log.d(TAG, "Request " + requestId + " canceled for debugging");
+                        }
+                    });
+                }
+            }
+        });
     }
 }

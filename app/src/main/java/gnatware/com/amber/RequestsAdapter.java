@@ -13,14 +13,17 @@ import android.widget.TextView;
 import com.google.android.gms.maps.model.LatLng;
 import com.parse.FindCallback;
 import com.parse.GetCallback;
+import com.parse.Parse;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
+import com.parse.SaveCallback;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -33,6 +36,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     public static final int VIEW_TYPE_AVAILABLE_REQUEST = 1;
     public static final int VIEW_TYPE_ACCEPTED_REQUEST = 2;
 
+
     // Member variables for requests and Parse query parameters
     private ParseUser mDriver;
     private Activity mActivity;
@@ -42,10 +46,11 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     public static class ViewHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener {
 
-        public static final String TAG = "RequestsAdapter.ViewHolder";
+        public static final String TAG = "RAViewHolder";
+
+        private RequestsAdapter mAdapter;
 
         // Private member variables accessible from RequestsAdapter
-        private RequestsAdapter mAdapter;
         private int mViewType;
         private TextView mTxtRequesterId;
         private TextView mTxtPickupDistance;
@@ -95,10 +100,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
             Log.d(TAG, "onClick for " + mRequest.objectId);
 
             if (hasAcceptedRequest()) {
-                Log.d(TAG, "Canceling requests");
-                mAdapter.cancelAcceptedRequests();
-
-                // TODO: Restart this activity??
+                Log.d(TAG, "Canceling request");
+                mAdapter.cancelRequest(mRequest.objectId);
             } else {
                 Log.d(TAG, "Starting DriverMapActivity");
 
@@ -115,6 +118,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                 context.startActivity(driverMapIntent);
             }
         }
+
     }
 
     public RequestsAdapter(ParseUser driver, Activity activity) {
@@ -128,19 +132,30 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         updateRequests();
     }
 
-    // For debugging purposes
-    public void cancelAcceptedRequests() {
+    public void cancelRequest(final String requestId) {
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-        query.whereExists("driver");
-        query.findInBackground(new FindCallback<ParseObject>() {
+        query.getInBackground(requestId, new GetCallback<ParseObject>() {
+
             @Override
-            public void done(List<ParseObject> objects, ParseException e) {
-                for (ParseObject object : objects) {
-                    object.remove("driver");
-                    object.remove("driverLat");
-                    object.remove("driverLng");
-                    object.remove("acceptedAt");
-                    object.saveInBackground();
+            public void done(ParseObject request, ParseException e) {
+                if (request == null) {
+                    Log.d(TAG, "Could not get request " + requestId);
+                } else {
+                    Date now = new Date();
+                    request.put("canceledAt", now);
+                    request.put("cancellationReason", "Canceled by driver...");
+                    Log.d(TAG, "Canceling request " + requestId);
+                    request.saveInBackground(new SaveCallback() {
+
+                        @Override
+                        public void done(ParseException e) {
+                            Log.d(TAG, "Request " + requestId + " canceled by driver");
+                            updateRequests();
+
+                            // TODO: Give feedback (Snackbar?)
+                            // TODO: Notify rider
+                        }
+                    });
                 }
             }
         });
@@ -149,6 +164,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     // Do an async Parse query and cache the results in the adapter's mRequests array
     public void updateRequests() {
         final ParseQuery<ParseObject> queryAccepted = new ParseQuery<ParseObject>("Request");
+        queryAccepted.whereDoesNotExist("canceledAt");
         queryAccepted.whereEqualTo("driver", mDriver);
         queryAccepted.getFirstInBackground(new GetCallback<ParseObject>() {
 
@@ -170,6 +186,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                     notifyDataSetChanged();
                 } else {
                     ParseQuery<ParseObject> queryAvailable = new ParseQuery<ParseObject>("Request");
+                    queryAvailable.whereDoesNotExist("canceledAt");
                     queryAvailable.whereDoesNotExist("driver");
                     queryAvailable.whereNotEqualTo("requester", mDriver);
                     queryAvailable.whereNear("pickupLocation", mDriverLocation);
@@ -177,13 +194,13 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                     queryAvailable.findInBackground(new FindCallback<ParseObject>() {
 
                         @Override
-                        public void done(List<ParseObject> objects, ParseException e2) {
+                        public void done(List<ParseObject> requests, ParseException e2) {
                             if (e2 != null) {
                                 Log.d(TAG, e2.getMessage());
                             } else {
-                                Log.d(TAG, "Found " + objects.size() + " nearby requests");
+                                Log.d(TAG, "Found " + requests.size() + " nearby requests");
                                 mRequests.clear();
-                                for (ParseObject request : objects) {
+                                for (ParseObject request : requests) {
                                     mRequests.add(new RiderRequest(
                                             request.getObjectId(),
                                             false,

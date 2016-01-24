@@ -63,7 +63,7 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
         ParseUser driver = ParseUser.getCurrentUser();
         mRequestsAdapter = new RequestsAdapter(driver, this);
         if (false) { // BuildConfig.DEBUG
-            mRequestsAdapter.cancelAcceptedRequests();
+            mApplication.cancelAllActiveRequests();
         }
         rvRequests.setAdapter(mRequestsAdapter);
 

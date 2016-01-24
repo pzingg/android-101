@@ -371,37 +371,39 @@ public class RiderMapActivity extends AppCompatActivity implements
         if (requester != null) {
                 ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
                 query.whereEqualTo("requester", requester);
+                query.whereDoesNotExist("canceledAt");
 
                 Log.d(TAG, "Finding requests for user " + requester.getObjectId());
                 query.findInBackground(new FindCallback<ParseObject>() {
 
                     @Override
-                    public void done(List<ParseObject> objects, ParseException e1) {
+                    public void done(List<ParseObject> requests, ParseException e1) {
                         if (e1 != null) {
                             Log.d(TAG, "Error canceling request: " + e1.getMessage());
                             updateRequestStateUI("Error canceling request");
                         } else {
-                            if (objects.isEmpty()) {
+                            if (requests.isEmpty()) {
                                 Log.d(TAG, "Error canceling request: No pending requests");
                                 resetRequestState();
                                 updateRequestStateUI("No pending requests");
                             } else {
-                                Log.d(TAG, "Deleting " + Integer.toString(objects.size()) +
+                                Log.d(TAG, "Canceling " + Integer.toString(requests.size()) +
                                         " request(s) for user " + requester.getObjectId());
-                                ParseObject.deleteAllInBackground(objects, new DeleteCallback() {
+                                resetRequestState();
+                                updateRequestStateUI("Request canceled");
+                                Date now = new Date();
+                                for (final ParseObject request : requests) {
+                                    final String requestId = request.getObjectId();
+                                    request.put("canceledAt", now);
+                                    request.put("cancellationReason", "Canceled by rider...");
+                                    request.saveInBackground(new SaveCallback() {
 
-                                    @Override
-                                    public void done(ParseException e2) {
-                                        String status = null;
-                                        if (e2 != null) {
-                                            Log.d(TAG, "Error deleting requests: " + e2.getMessage());
-                                            status = "Error deleting requests";
-                                        } else {
-                                            resetRequestState();
+                                        @Override
+                                        public void done(ParseException e) {
+                                            Log.d(TAG, "Request " + requestId + " canceled by rider");
                                         }
-                                        updateRequestStateUI(status);
-                                    }
-                                });
+                                    });
+                                }
                             }
                         }
                     }
