@@ -34,10 +34,19 @@ public class AmberApplication extends Application {
     private LatLng mDefaultLocation;
 
 
-    // TODO: GoogleService failed to initialize
+    // TODO: Warning in logcat - GoogleService failed to initialize
     // Missing an expected resource: 'R.string.google_app_id' for initializing Google services.
     // Possible causes are missing google-services.json
     // or com.google.gms.google-services gradle plugin.
+
+    // TODO: Use ParseLoginUI for sign up process
+    // http://blog.parse.com/learn/engineering/login-love-for-your-android-app/
+
+    // TODO: Convert Parse anonymous user to signed up user
+    // http://stackoverflow.com/questions/27595057/converting-an-anonymous-user-to-a-regular-user-and-saving
+
+    // TODO: Enable push notifications when requests are canceled
+    // https://www.parse.com/tutorials/android-push-notifications
 
     @Override
     public void onCreate() {
