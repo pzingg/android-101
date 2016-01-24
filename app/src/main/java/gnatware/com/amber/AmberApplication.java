@@ -132,6 +132,7 @@ public class AmberApplication extends Application {
                         @Override
                         public void done(ParseException e) {
                             Log.d(TAG, "Request " + requestId + " canceled for debugging");
+                            // TODO: Notify rider and driver (push notification?)
                         }
                     });
                 }

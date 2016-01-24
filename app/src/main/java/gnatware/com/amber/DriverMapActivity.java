@@ -160,6 +160,11 @@ public class DriverMapActivity extends AppCompatActivity implements
         mApplication.requestLocationUpdates(this);
     }
 
+    public void showSnack(String message) {
+        Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
     private void updateMap() {
         Log.d(TAG, "updateMap");
         if (mMap == null) {
@@ -232,8 +237,7 @@ public class DriverMapActivity extends AppCompatActivity implements
                     // Something failed, show message
                     // TODO: Go back to DriverRequestsActivity?
                     Log.d(TAG, message);
-                    Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
-                    snackbar.show();
+                    showSnack(message);
                 } else {
 
                     // Request still available, book it and show directions
@@ -256,8 +260,8 @@ public class DriverMapActivity extends AppCompatActivity implements
                                 accepted = true;
                             }
                             Log.d(TAG, message);
-                            Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
-                            snackbar.show();
+                            showSnack(message);
+
                             if (accepted) {
                                 DecimalFormat format = new DecimalFormat("0.######");
                                 String mapsUri = "https://maps.google.com/maps?saddr=" +

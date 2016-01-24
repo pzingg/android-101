@@ -39,7 +39,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
     // Member variables for requests and Parse query parameters
     private ParseUser mDriver;
-    private Activity mActivity;
+    private DriverRequestsActivity mActivity;
     private ParseGeoPoint mDriverLocation;
     private List<RiderRequest> mRequests;
 
@@ -118,12 +118,11 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                 context.startActivity(driverMapIntent);
             }
         }
-
     }
 
-    public RequestsAdapter(ParseUser driver, Activity activity) {
-        mDriver = driver;
+    public RequestsAdapter(DriverRequestsActivity activity, ParseUser driver) {
         mActivity = activity;
+        mDriver = driver;
         mRequests = new ArrayList<RiderRequest>();
     }
 
@@ -150,10 +149,10 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                         @Override
                         public void done(ParseException e) {
                             Log.d(TAG, "Request " + requestId + " canceled by driver");
-                            updateRequests();
 
-                            // TODO: Give feedback (Snackbar?)
-                            // TODO: Notify rider
+                            // TODO: Notify rider (push notification?)
+                            mActivity.showSnack("Request canceled");
+                            updateRequests();
                         }
                     });
                 }

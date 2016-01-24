@@ -6,6 +6,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -19,27 +21,19 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     public static final String TAG = "DriverRequestsActivity";
 
     private AmberApplication mApplication;
+    private CoordinatorLayout mLayout;
     private RequestsAdapter mRequestsAdapter;
 
     private LatLng mDriverLocation;
 
-    protected void updateDriverLocation(Location location) {
-        if (location == null) {
-            location = mApplication.getLastKnownLocation();
-            if (location == null) {
-                Log.d(TAG, "No location");
-                return;
-            }
-        }
-        mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        mApplication.updateDriverLocation(mDriverLocation);
-        mRequestsAdapter.updateDriverLocation(mDriverLocation);
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_driver_requests);
+
+        mApplication = (AmberApplication) getApplication();
+
+        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_driver_requests, null);
+        setContentView(mLayout);
 
         /*
         // Action bar is supplied by theme in AndroidManifest.xml
@@ -61,7 +55,7 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
 
         // Create the adapter that interfaces with Parse API to bind data to the view
         ParseUser driver = ParseUser.getCurrentUser();
-        mRequestsAdapter = new RequestsAdapter(driver, this);
+        mRequestsAdapter = new RequestsAdapter(this, driver);
         if (false) { // BuildConfig.DEBUG
             mApplication.cancelAllActiveRequests();
         }
@@ -71,7 +65,6 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
         // Set layout manager to position the items
         rvRequests.setLayoutManager(new LinearLayoutManager(this));
 
-        mApplication = (AmberApplication) getApplication();
         mApplication.requestLocationUpdates(this);
         updateDriverLocation(null);
     }
@@ -96,5 +89,23 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     @Override
     public void onProviderDisabled(String provider) {
 
+    }
+
+    public void showSnack(String message) {
+        Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
+    protected void updateDriverLocation(Location location) {
+        if (location == null) {
+            location = mApplication.getLastKnownLocation();
+            if (location == null) {
+                Log.d(TAG, "No location");
+                return;
+            }
+        }
+        mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        mApplication.updateDriverLocation(mDriverLocation);
+        mRequestsAdapter.updateDriverLocation(mDriverLocation);
     }
 }

@@ -267,6 +267,11 @@ public class RiderMapActivity extends AppCompatActivity implements
         mapFragment.getMapAsync(this);
     }
 
+    public void showSnack(String message) {
+        Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
     private void updateMap() {
         if (mMap == null) {
             Log.d(TAG, "No map");
@@ -401,6 +406,7 @@ public class RiderMapActivity extends AppCompatActivity implements
                                         @Override
                                         public void done(ParseException e) {
                                             Log.d(TAG, "Request " + requestId + " canceled by rider");
+                                            // TODO: Notify driver (push notification?)
                                         }
                                     });
                                 }
@@ -440,8 +446,7 @@ public class RiderMapActivity extends AppCompatActivity implements
                 status = "Click to request a driver...";
             }
         }
-        Snackbar snackbar = Snackbar.make(mLayout, status, Snackbar.LENGTH_LONG);
-        snackbar.show();
+        showSnack(status);
     }
 
     // Setup a recurring alarm every 5 seconds
