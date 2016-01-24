@@ -31,6 +31,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.parse.DeleteCallback;
 import com.parse.FindCallback;
 import com.parse.GetCallback;
+import com.parse.ParseAnalytics;
+import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
@@ -38,6 +40,7 @@ import com.parse.ParseQuery;
 import com.parse.ParseUser;
 import com.parse.ParseACL;
 import com.parse.SaveCallback;
+import com.parse.ui.ParseLoginBuilder;
 
 import junit.framework.Assert;
 
@@ -121,31 +124,32 @@ public class RiderMapActivity extends AppCompatActivity implements
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "Result received");
-
             // This method is called when the BroadcastReceiver is receiving
             // an Intent broadcast.
             int flags = intent.getIntExtra("flags", 0);
             if (0 != (flags & RequestStatusService.RESULT_FLAG_ERROR)) {
-                Log.d(TAG, "Error result");
+                Log.d(TAG, "onReceive: Error result: " + intent.getStringExtra("errorMessage"));
             } else {
-                mRequestId = intent.getStringExtra("requestId");
+                mRequestId = null;
                 mDriverId = null;
                 mDriverLocation = null;
-                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER)) {
-                    Log.d(TAG, "Driver result");
-                    mDriverId = intent.getStringExtra("driverId");
-                }
-                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER_LOCATION)) {
-                    double latitude = intent.getDoubleExtra("latitude", 1000.);
-                    double longitude = intent.getDoubleExtra("longitude", 1000.);
-                    if (latitude < 200. && longitude < 200.) {
-                        Log.d(TAG, "Location result");
-                        mDriverLocation = new LatLng(latitude, longitude);
-                    } else {
-                        Log.d(TAG, "Invalid latitude or longitude");
+                if (0 != (flags & RequestStatusService.RESULT_FLAG_REQUEST)) {
+                    mRequestId = intent.getStringExtra("requestId");
+                    if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER)) {
+                        mDriverId = intent.getStringExtra("driverId");
+                        if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER_LOCATION)) {
+                            double latitude = intent.getDoubleExtra("latitude", 1000.);
+                            double longitude = intent.getDoubleExtra("longitude", 1000.);
+                            if (latitude < 200. && longitude < 200.) {
+                                mDriverLocation = new LatLng(latitude, longitude);
+                            }
+                        }
                     }
                 }
+                Log.d(TAG, "onReceive: Parsed result: request=" +
+                        (mRequestId == null ? "null" : mRequestId) + ", driver=" +
+                        (mDriverId == null ? "null" : mDriverId) + ", location=" +
+                        (mDriverLocation == null ? "null" : mDriverLocation.toString()));
                 updateRequestStateUI(null);
                 updateMap();
             }
@@ -333,40 +337,61 @@ public class RiderMapActivity extends AppCompatActivity implements
     private void postRequest() {
         Log.d(TAG, "postRequest");
         ParseUser requester = ParseUser.getCurrentUser();
+        if (requester == null) {
+            Log.d(TAG, "No user");
+        } else if (ParseAnonymousUtils.isLinked(requester)) {
 
-        if (requester != null) {
+            // You can convert an anonymous user into a regular user by setting
+            // the username and password, then calling signUp(), or by logging in or
+            // linking with a service like Facebook or Twitter. The converted user will
+            // retain all of its data. To determine whether the current user is an
+            // anonymous user, you can check ParseAnonymousUtils.isLinked()
 
-                // Drivers and requesters all need to see requests
-                ParseACL acl = new ParseACL();
-                acl.setPublicReadAccess(true);
-                acl.setPublicWriteAccess(true);
+            // App Settings note: If we currently have a saved anonymous user, and the
+            // user creates a new account through the Parse sign up UI, it's important that
+            // we DISABLE "Revoke session on password change" in the Users > User Sessions
+            // area of App Settings for the application on parse.com.
+            // The sign up process changes two fields on the user:
+            //     The authData field, previously '{"anonymous":...}', is now null, and
+            //     The password field is changed from a random one to the new (encrypted) password.
+            // Unless the "Revoke session" setting is disabled, the password change
+            // will remove the session, and the next Parse query we run will fail with an
+            // "invalid session token" exception, requiring a log out and log in.
+            Log.d(TAG, "Anonymous user - require sign up");
+            signUpUser();
+        } else if (!requester.isAuthenticated()) {
+            Log.d(TAG, "Unauthenticated user - require log in");
+            logInUser();
+        } else {
+            // Drivers and requesters all need to see requests
+            ParseACL acl = new ParseACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
 
-                ParseGeoPoint pickupLocation = new ParseGeoPoint(
-                        mRiderLocation.latitude, mRiderLocation.longitude);
+            ParseGeoPoint pickupLocation = new ParseGeoPoint(
+                    mRiderLocation.latitude, mRiderLocation.longitude);
 
-                final ParseObject request = new ParseObject("Request");
-                request.setACL(acl);
-                request.put("requester", requester);
-                request.put("pickupLocation", pickupLocation);
-                request.put("requestedAt", new Date());
+            final ParseObject request = new ParseObject("Request");
+            request.setACL(acl);
+            request.put("requester", requester);
+            request.put("pickupLocation", pickupLocation);
+            request.put("requestedAt", new Date());
 
-                Log.d(TAG, "Posting request for user " + requester.getObjectId() +
-                        " at " + pickupLocation.toString());
-                request.saveInBackground(new SaveCallback() {
+            Log.d(TAG, "Posting request for user " + requester.getObjectId() +
+                    " at " + pickupLocation.toString());
+            request.saveInBackground(new SaveCallback() {
 
-                    @Override
-                    public void done(ParseException e) {
-                        String status = null;
-                        if (e != null) {
-                            Log.d(TAG, "Error posting request: " + e.getMessage());
-                            status = "Error posting request!";
-                        }
-                        updateRequestStateUI(status);
+                @Override
+                public void done(ParseException e) {
+                    String status = null;
+                    if (e != null) {
+                        Log.d(TAG, "Error posting request: " + e.getMessage());
+                        status = "Error posting request!";
                     }
-                });
-                return;
+                    updateRequestStateUI(status);
+                }
+            });
         }
-        Log.d(TAG, "Error posting request: No anonymous user");
     }
 
     private void cancelRequest() {
@@ -479,6 +504,17 @@ public class RiderMapActivity extends AppCompatActivity implements
 
         Log.d(TAG, "Unregistering getRequestStatus receiver");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
+    }
+
+    private void signUpUser() {
+        ParseLoginBuilder builder = new ParseLoginBuilder(this);
+        builder.setParseLoginButtonText("Log in as another user");
+        startActivityForResult(builder.build(), 0);
+    }
+
+    private void logInUser() {
+        ParseLoginBuilder builder = new ParseLoginBuilder(this);
+        startActivityForResult(builder.build(), 0);
     }
 }
 

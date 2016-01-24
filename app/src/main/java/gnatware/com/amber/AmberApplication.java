@@ -10,8 +10,10 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.parse.FindCallback;
+import com.parse.GetCallback;
 import com.parse.Parse;
 import com.parse.ParseACL;
+import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
@@ -51,6 +53,7 @@ public class AmberApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d(TAG, "onCreate");
 
         // Enable Local Datastore.
         Parse.enableLocalDatastore(this);
@@ -58,7 +61,36 @@ public class AmberApplication extends Application {
         // Add your initialization code here
         Parse.initialize(this);
 
+        // Allow anonymous users and save one if it's created
         ParseUser.enableAutomaticUser();
+        ParseUser user = ParseUser.getCurrentUser();
+        if (user == null) {
+            Log.d(TAG, "No current user");
+        } else {
+            Boolean authenticated = user.isAuthenticated();
+            Boolean anonymous = ParseAnonymousUtils.isLinked(user);
+            Log.d(TAG, "Running query as current user " + user.getObjectId() +
+                    ", anon=" + String.valueOf(anonymous) +
+                    ", auth=" + String.valueOf(authenticated));
+
+            ParseQuery<ParseUser> query = ParseUser.getQuery();
+            query.getFirstInBackground(new GetCallback<ParseUser>() {
+
+                @Override
+                public void done(ParseUser user, ParseException e) {
+                    if (e == null) {
+                        Log.d(TAG, "Get OK");
+                    } else {
+                        Log.d(TAG, "Get error: " + e.getMessage());
+                        if (ParseException.INVALID_SESSION_TOKEN == e.getCode()) {
+                            Log.d(TAG, "Invalid session token - logging out");
+                            ParseUser.logOut();
+                        }
+                    }
+                }
+            });
+        }
+
         ParseACL defaultACL = new ParseACL();
 
         // Optionally enable public read access.

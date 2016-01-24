@@ -89,7 +89,7 @@ public class RequestStatusService extends IntentService {
         query.whereEqualTo("objectId", requestId);
         query.include("requester");
         query.include("driver");
-        performQueryAndSendResult(query, ACTION_GET_REQUEST_STATUS);
+        performQueryAndSendResult(query, true, ACTION_GET_REQUEST_STATUS);
     }
 
     private void getRiderRequestStatus(String requesterId) {
@@ -103,10 +103,11 @@ public class RequestStatusService extends IntentService {
         query.whereMatchesQuery("requester", userQuery);
         query.include("requester");
         query.include("driver");
-        performQueryAndSendResult(query, ACTION_GET_RIDER_REQUEST_STATUS);
+        performQueryAndSendResult(query, false, ACTION_GET_RIDER_REQUEST_STATUS);
     }
 
-    private void performQueryAndSendResult(ParseQuery<ParseObject> query, String action) {
+    private void performQueryAndSendResult(ParseQuery<ParseObject> query,
+                                           Boolean notFoundIsError, String action) {
         String error = null;
         String requestId = null;
         String requesterId = null;
@@ -117,14 +118,16 @@ public class RequestStatusService extends IntentService {
         try {
             request = query.getFirst();
         } catch (ParseException e) {
-            error = "Cannot get request object for query " + query.toString() + ": " + e.getMessage();
+            if (ParseException.OBJECT_NOT_FOUND != e.getCode()) {
+                error = "Query error: " + e.getMessage();
+                Log.d(TAG, error);
+            }
         }
 
         if (request == null) {
-            if (error == null) {
-                error = "No request object for query " + query.toString();
+            if ((error == null) && notFoundIsError) {
+                error = "No request found";
             }
-            Log.d(TAG, error);
         } else {
             requestId = request.getObjectId();
 
@@ -179,7 +182,7 @@ public class RequestStatusService extends IntentService {
             }
         }
         intent.putExtra("flags", flags);
-        Log.d(TAG, "sendResultforAction: broadcasting intent");
+        Log.d(TAG, "sendResultforAction: broadcasting intent, flags=" + String.valueOf(flags));
 
         // Fire the broadcast with intent packaged
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);

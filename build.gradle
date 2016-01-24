@@ -18,6 +18,24 @@ allprojects {
     }
 }
 
+ext {
+    // Versions and libraries for imported ParseUI modules
+    // These values should match the versions present in your :app module's build.gradle
+    compileSdkVersion = 23
+    buildToolsVersion = "23.0.2"
+    minSdkVersion = 19
+    targetSdkVersion = 23
+
+    facebookSDK = 'com.facebook.android:facebook-android-sdk:4.0.1'
+    androidSupport = 'com.android.support:support-v4:22.0.0'
+    bolts = 'com.parse.bolts:bolts-android:1.2.0'
+    parse = 'com.parse:parse-android:1.10.0'
+
+    // Download jar files from Parse Maven repository and place in libs folder
+    parseFacebookUtilsPath = "$rootProject.projectDir/ParseUI-Login/libs/parsefacebookutils-v4-android-1.10.4.jar"
+    parseTwitterUtilsPath = "$rootProject.projectDir/ParseUI-Login/libs/parsetwitterutils-android-1.10.3.jar"
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
