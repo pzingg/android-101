@@ -27,6 +27,12 @@ public class AmberApplication extends Application {
     private String mProvider;
     private LatLng mDefaultLocation;
 
+
+    // TODO: GoogleService failed to initialize
+    // Missing an expected resource: 'R.string.google_app_id' for initializing Google services.
+    // Possible causes are missing google-services.json
+    // or com.google.gms.google-services gradle plugin.
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -94,9 +100,12 @@ public class AmberApplication extends Application {
     public void updateDriverLocation(LatLng location) {
         ParseUser driver = ParseUser.getCurrentUser();
         if (driver != null && driver.getString("role") == "driver") {
-            driver.put("location", new ParseGeoPoint(location.latitude, location.longitude));
-            driver.put("locationAt", new Date());
+            Log.d(TAG, "updateDriverLocation: Saving driver location");
+            driver.put("lastLocation", new ParseGeoPoint(location.latitude, location.longitude));
+            driver.put("lastLocationAt", new Date());
             driver.saveEventually();
+        } else {
+            Log.d(TAG, "updateDriverLocation: Current user is not a driver");
         }
     }
 }

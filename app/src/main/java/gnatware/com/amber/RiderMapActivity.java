@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.SystemClock;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
@@ -40,20 +39,27 @@ import com.parse.ParseUser;
 import com.parse.ParseACL;
 import com.parse.SaveCallback;
 
+import junit.framework.Assert;
+
+import java.util.Date;
 import java.util.List;
 
 public class RiderMapActivity extends AppCompatActivity implements
         ViewTreeObserver.OnGlobalLayoutListener, LocationListener, OnMapReadyCallback {
 
     public static final String TAG = "RiderMapActivity";
+    public static final String ACTION_REQUEST_STATUS_ALARM = "gnatware.com.amber.action.REQUEST_STATUS_ALARM";
 
     public static final Integer REQUEST_NONE = 0;
     public static final Integer REQUEST_ACTIVE = 1;
     public static final Integer REQUEST_ASSIGNED = 2;
-    
+    private static final String[] REQUEST_STATES = {
+            "NONE", "ACTIVE", "ASSIGNED"
+    };
+
     private AmberApplication mApplication;
     private RequestStatusReceiver mStatusReceiver;
-    private AlarmManager mAlarmMgr;
+    private AlarmManager mAlarmManager;
     private PendingIntent mStatusAlarmIntent;
 
     // Dynamic UI elements
@@ -63,7 +69,6 @@ public class RiderMapActivity extends AppCompatActivity implements
     private Boolean mLayoutComplete;
 
     // Current rider request status
-    private int mRequestState;
     private String mRequestId;
     private String mDriverId;
     private LatLng mDriverLocation;
@@ -72,361 +77,107 @@ public class RiderMapActivity extends AppCompatActivity implements
     private GoogleMap mMap;
     private LatLng mRiderLocation;
 
-    // Handle the result of a scheduled 5 second alarm
-    public class RequestStatusAlarmReceiver extends BroadcastReceiver {
+    // Static method
+    public static void checkPendingRequest(Context context, String logMessage) {
+        Log.d(TAG, "checkPendingRequest (" + logMessage + ")");
+
+        ParseUser requester = ParseUser.getCurrentUser();
+        if (requester != null) {
+            Log.d(TAG, "Starting service for requester " + requester.getObjectId());
+            RequestStatusService.startGetRiderRequestStatus(context, requester.getObjectId());
+        } else {
+            Log.d(TAG, "No current user!");
+        }
+    }
+
+    // To be an inner class, must be declared static, with a zero-argment constructor.
+    // Therefore this class cannot access any non-static members of the containing class.
+    // The receiver class name is registered in AndroidManifest.xml and the receiver is
+    // constructed by the pending intent ActivityThread.handleReceiver method, or else you get:
+    // "java.lang.InstantiationException: class has no zero argument constructor".
+    public static class RequestStatusAlarmReceiver extends BroadcastReceiver {
+
+        private static final String TAG = "RSAlarmReceiver";
+
         public RequestStatusAlarmReceiver() {
         }
 
-
-        // This should be hit every 5 seconds
+        // Handle the repeating alarm
         @Override
         public void onReceive(Context context, Intent intent) {
-
-            if (mRequestId != null) {
-                Log.d(TAG, "Alarm received; starting service for request " + mRequestId);
-
-                // Start a service ACTION that will be broadcast to our
-                // RequestStatusReceiver
-                RequestStatusService.startGetRequestStatus(RiderMapActivity.this, mRequestId);
-            } else {
-                Log.d(TAG, "Alarm received; nothing to do (no current request)");
-            }
+            long now = SystemClock.elapsedRealtime();
+            Log.d(TAG, "onReceive, time=" + String.valueOf(now));
+            checkPendingRequest(context, "onReceive");
         }
     }
 
     // Handle the result of a getRequestStatus service
     public class RequestStatusReceiver extends BroadcastReceiver {
+
+        private static final String TAG = "RequestStatusReceiver";
+
         public RequestStatusReceiver() {
         }
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "Result received");
 
             // This method is called when the BroadcastReceiver is receiving
             // an Intent broadcast.
             int flags = intent.getIntExtra("flags", 0);
             if (0 != (flags & RequestStatusService.RESULT_FLAG_ERROR)) {
-                Log.d(TAG, "Got error request status result");
+                Log.d(TAG, "Error result");
             } else {
-                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER_LOCATION)) {
-                    mDriverLocation = new LatLng(
-                            intent.getDoubleExtra("latitiude", 0.),
-                            intent.getDoubleExtra("longitude", 0.));
-                }
+                mRequestId = intent.getStringExtra("requestId");
+                mDriverId = null;
+                mDriverLocation = null;
                 if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER)) {
+                    Log.d(TAG, "Driver result");
                     mDriverId = intent.getStringExtra("driverId");
                 }
-            }
-        }
-    }
-
-    // Setup a recurring alarm every 5 seconds
-    public void scheduleRequestStatusAlarm() {
-        if (mAlarmMgr != null && mStatusAlarmIntent != null) {
-            Log.d(TAG, "Scheduling 5 second repeating alarm");
-            mAlarmMgr.setInexactRepeating(
-                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                    System.currentTimeMillis(), 5000, mStatusAlarmIntent);
-        }
-    }
-
-    // Cancel the pending intent
-    public void cancelRequestStatusAlarm() {
-        if (mAlarmMgr != null && mStatusAlarmIntent != null) {
-            Log.d(TAG, "Canceling 5 second repeating alarm");
-            mAlarmMgr.cancel(mStatusAlarmIntent);
-        }
-    }
-
-    protected void updateMap() {
-        if (mMap == null) {
-            Log.d(TAG, "No map");
-        } else if (mRiderLocation != null) {
-            mMap.clear();
-            mMap.addMarker(new MarkerOptions()
-                    .position(mRiderLocation)
-                    .title("Your Location")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-            if (mDriverId != null && mDriverLocation != null) {
-                if (!mLayoutComplete) {
-                    Log.d(TAG, "Layout incomplete");
-                    // Fall through to center rider on map
-                } else {
-                    Log.d(TAG, "Locate driver and rider on map");
-                    // Figure out a bounds and zoom level
-                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                    mMap.addMarker(new MarkerOptions()
-                            .position(mDriverLocation)
-                            .title(mDriverId)
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-                    builder.include(mRiderLocation);
-                    builder.include(mDriverLocation);
-
-                    // Error using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
-                    // Most likely, layout has not yet occured for the map view.
-                    View view = findViewById(R.id.rider_map_view);
-                    int width = view.getWidth();
-                    int height = view.getHeight();
-                    if (height > 400) {
-                        height -= 200;
-                    } // Try to avoid FAB at bottom right of view?
-                    LatLngBounds bounds = builder.build();
-                    CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, width, height, 100);
-                    mMap.moveCamera(update);
-                    return;
+                if (0 != (flags & RequestStatusService.RESULT_FLAG_DRIVER_LOCATION)) {
+                    double latitude = intent.getDoubleExtra("latitude", 1000.);
+                    double longitude = intent.getDoubleExtra("longitude", 1000.);
+                    if (latitude < 200. && longitude < 200.) {
+                        Log.d(TAG, "Location result");
+                        mDriverLocation = new LatLng(latitude, longitude);
+                    } else {
+                        Log.d(TAG, "Invalid latitude or longitude");
+                    }
                 }
-            }
-            Log.d(TAG, "Center rider on map");
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mRiderLocation, 10));
-        }
-    }
-
-    protected void updateRiderLocation(Location location) {
-        if (location == null) {
-            location = mApplication.getLastKnownLocation();
-            if (location == null) {
-                Log.d(TAG, "No location");
-                return;
+                updateRequestStateUI(null);
+                updateMap();
             }
         }
-        mRiderLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        updateMap();
-    }
-
-    protected void submitRequest() {
-        Log.d(TAG, "Submit request");
-        ParseUser requester = ParseUser.getCurrentUser();
-
-        if (requester != null) {
-            String requesterId = requester.getObjectId();
-            if (requesterId != null) {
-
-                // Drivers and requesters all need to see requests
-                ParseACL acl = new ParseACL();
-                acl.setPublicReadAccess(true);
-                acl.setPublicWriteAccess(true);
-
-                ParseGeoPoint pickupLocation = new ParseGeoPoint(
-                        mRiderLocation.latitude, mRiderLocation.longitude);
-
-                final ParseObject request = new ParseObject("Request");
-                request.setACL(acl);
-                request.put("requesterId", requesterId);
-                request.put("pickupLocation", pickupLocation);
-
-                Log.d(TAG, "Submitting request for user " + requesterId +
-                        " at " + pickupLocation.toString());
-                request.saveInBackground(new SaveCallback() {
-
-                    @Override
-                    public void done(ParseException e) {
-                        String status = null;
-                        if (e != null) {
-                            Log.d(TAG, "Error submitting request: " + e.getMessage());
-                            status = "Error sending request!";
-                        } else {
-                            mRequestState = REQUEST_ACTIVE;
-                        }
-                        updateRequestPending(status);
-                    }
-                });
-                return;
-            }
-        }
-        Log.d(TAG, "Error submitting request: No anonymous user");
-    }
-
-    protected void cancelRequest() {
-        Log.d(TAG, "Cancel request");
-        ParseUser requester = ParseUser.getCurrentUser();
-
-        if (requester != null) {
-            final String requesterId = requester.getObjectId();
-            if (requesterId != null) {
-                ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-                query.whereEqualTo("requesterId", requesterId);
-
-                Log.d(TAG, "Finding requests for user " + requesterId);
-                query.findInBackground(new FindCallback<ParseObject>() {
-
-                    @Override
-                    public void done(List<ParseObject> objects, ParseException e1) {
-                        if (e1 != null) {
-                            Log.d(TAG, "Error canceling request: " + e1.getMessage());
-                            updateRequestPending("Error canceling request");
-                        } else {
-                            if (objects.isEmpty()) {
-                                mRequestState = REQUEST_NONE;
-                                Log.d(TAG, "Error canceling request: No pending requests");
-                                updateRequestPending("No pending requests");
-                            } else {
-                                Log.d(TAG, "Deleting " + Integer.toString(objects.size()) +
-                                        " request(s) for user " + requesterId);
-                                ParseObject.deleteAllInBackground(objects, new DeleteCallback() {
-
-                                    @Override
-                                    public void done(ParseException e2) {
-                                        String status = null;
-                                        if (e2 != null) {
-                                            Log.d(TAG, "Error deleting requests: " + e2.getMessage());
-                                            status = "Error deleting requests";
-                                        } else {
-                                            mRequestState = REQUEST_NONE;
-                                        }
-                                        updateRequestPending(status);
-                                    }
-                                });
-                            }
-                        }
-                    }
-                });
-                return;
-            }
-        }
-        Log.d(TAG, "Error canceling request: No anonymous user");
-    }
-
-    protected void updateRequestPending(String status) {
-        if (mRequestState != REQUEST_NONE) {
-            Log.d(TAG, "UI set to request pending");
-            mFab.setImageResource(R.drawable.ic_clear_black_24dp);
-            mFab.setContentDescription("Cancel your request");
-            if (status == null) {
-                status = "Finding a driver.  Click to cancel.";
-            }
-        } else {
-            Log.d(TAG, "UI reset to NO request pending");
-            mFab.setImageResource(R.drawable.ic_add_black_24dp);
-            mFab.setContentDescription("Request a driver");
-            if (status == null) {
-                status = "Click to request a driver...";
-            }
-        }
-        Snackbar snackbar = Snackbar.make(mLayout, status, Snackbar.LENGTH_LONG);
-        snackbar.show();
-    }
-
-    protected void checkPendingRequest(final String status) {
-        Log.d(TAG, "Check pending request");
-        ParseUser requester = ParseUser.getCurrentUser();
-
-        if (requester != null) {
-            final String requesterId = requester.getObjectId();
-            if (requesterId != null) {
-                ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-                query.whereEqualTo("requesterId", requesterId);
-
-                Log.d(TAG, "Querying for first request for user " + requesterId);
-                query.getFirstInBackground(new GetCallback<ParseObject>() {
-
-                    @Override
-                    public void done(ParseObject object, ParseException e) {
-                        if (e != null) {
-                            Log.d(TAG, "Cannot check pending request: " + e.getMessage());
-                        } else {
-                            if (object != null) {
-                                mRequestId = object.getObjectId();
-
-                                // Update state
-                                mDriverId = object.getString("driverId");
-                                if (mDriverId != null) {
-                                    mRequestState = REQUEST_ASSIGNED;
-                                } else {
-                                    mRequestState = REQUEST_ACTIVE;
-                                }
-                            } else {
-
-                                // Update state
-                                mRequestId = null;
-                                mDriverId = null;
-                                mRequestState = REQUEST_NONE;
-                            }
-                            updateRequestPending(status);
-                        }
-                    }
-                });
-                return;
-            }
-        }
-        Log.d(TAG, "Cannot check pending request: No anonymous user");
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate");
 
-        mLayoutComplete = false;
-
-        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_rider_map, null);
-        setContentView(mLayout);
-
-        mStatusReceiver = new RequestStatusReceiver();
-
-        mAlarmMgr = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-        // Create the pending intent from our receiver
-        // requestCode = 0
-        // flags = 0
-        Intent intent = new Intent(this, RequestStatusAlarmReceiver.class);
-        mStatusAlarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-
-        /*
-        // Action bar is supplied by theme in AndroidManifest.xml
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-         */
-        mFab = (FloatingActionButton) findViewById(R.id.rider_map_fab);
-        mFab.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "FAB clicked");
-                if (mRequestState != REQUEST_NONE) {
-                    cancelRequest();
-                } else {
-                    submitRequest();
-                }
-            }
-        });
-
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.rider_map);
-        mapFragment.getMapAsync(this);
-
-        mRequestState = REQUEST_NONE;
-        checkPendingRequest(null);
-
-        mApplication = (AmberApplication) getApplication();
-        mApplication.requestLocationUpdates(this);
-
-        updateRiderLocation(null);
+        initializeState();
     }
+
 
     @Override
     protected void onPause() {
         super.onPause();
-
-        mApplication.removeLocationUpdates(this);
+        Log.d(TAG, "onPause");
 
         cancelRequestStatusAlarm();
-
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
+        mApplication.removeLocationUpdates(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d(TAG, "onResume");
 
         mApplication.requestLocationUpdates(this);
-
-        // Register for the request status broadcast based on ACTION string
-        IntentFilter filter = new IntentFilter(RequestStatusService.ACTION_GET_REQUEST_STATUS);
-        LocalBroadcastManager.getInstance(this).registerReceiver(mStatusReceiver, filter);
-
-        scheduleRequestStatusAlarm();
-
-        checkPendingRequest(null);
+        scheduleRequestStatusAlarm("onResume");
+        checkPendingRequest(this, "onResume");
         updateRiderLocation(null);
     }
 
@@ -476,6 +227,251 @@ public class RiderMapActivity extends AppCompatActivity implements
         mMap = googleMap;
 
         updateRiderLocation(null);
+    }
+
+    private void initializeState() {
+        mLayoutComplete = false;
+
+        mApplication = (AmberApplication) getApplication();
+        mStatusReceiver = new RequestStatusReceiver();
+        mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        // Create the pending intent from our receiver
+        // requestCode = 0
+        // flags = 0
+        Intent intent = new Intent(this, RequestStatusAlarmReceiver.class);
+        mStatusAlarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+
+        // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
+        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_rider_map, null);
+        mLayout.getViewTreeObserver().addOnGlobalLayoutListener(this);
+        setContentView(mLayout);
+
+        mFab = (FloatingActionButton) findViewById(R.id.rider_map_fab);
+        mFab.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "FAB clicked");
+                if (mRequestId != null) {
+                    cancelRequest();
+                } else {
+                    postRequest();
+                }
+            }
+        });
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.rider_map);
+        mapFragment.getMapAsync(this);
+    }
+
+    private void updateMap() {
+        if (mMap == null) {
+            Log.d(TAG, "No map");
+        } else if (mRiderLocation != null) {
+            mMap.clear();
+            mMap.addMarker(new MarkerOptions()
+                    .position(mRiderLocation)
+                    .title("Your Location")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+            if (mDriverId != null && mDriverLocation != null) {
+                if (!mLayoutComplete) {
+                    Log.d(TAG, "Layout incomplete");
+                    // Fall through to center rider on map
+                } else {
+                    Log.d(TAG, "Locate driver and rider on map");
+                    // Log.d(TAG, "   riderLocation=" + mRiderLocation.toString());
+                    // Log.d(TAG, "  driverLocation=" + mDriverLocation.toString());
+
+                    // Figure out a bounds and zoom level
+                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                    mMap.addMarker(new MarkerOptions()
+                            .position(mDriverLocation)
+                            .title(mDriverId)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                    builder.include(mRiderLocation);
+                    builder.include(mDriverLocation);
+
+                    // Error using newLatLngBounds(LatLngBounds, int): Map size can't be 0.
+                    // Most likely, layout has not yet occured for the map view.
+                    View view = findViewById(R.id.rider_map_view);
+                    int width = view.getWidth();
+                    int height = view.getHeight();
+                    if (height > 400) {
+                        height -= 200;
+                    } // Try to avoid FAB at bottom right of view?
+                    LatLngBounds bounds = builder.build();
+                    CameraUpdate update = CameraUpdateFactory.newLatLngBounds(bounds, width, height, 100);
+                    mMap.moveCamera(update);
+                    return;
+                }
+            }
+            Log.d(TAG, "Center rider on map");
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mRiderLocation, 10));
+        }
+    }
+
+    private void updateRiderLocation(Location location) {
+        if (location == null) {
+            location = mApplication.getLastKnownLocation();
+            if (location == null) {
+                Log.d(TAG, "No location");
+                return;
+            }
+        }
+        mRiderLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        updateMap();
+    }
+
+    private void postRequest() {
+        Log.d(TAG, "postRequest");
+        ParseUser requester = ParseUser.getCurrentUser();
+
+        if (requester != null) {
+
+                // Drivers and requesters all need to see requests
+                ParseACL acl = new ParseACL();
+                acl.setPublicReadAccess(true);
+                acl.setPublicWriteAccess(true);
+
+                ParseGeoPoint pickupLocation = new ParseGeoPoint(
+                        mRiderLocation.latitude, mRiderLocation.longitude);
+
+                final ParseObject request = new ParseObject("Request");
+                request.setACL(acl);
+                request.put("requester", requester);
+                request.put("pickupLocation", pickupLocation);
+                request.put("requestedAt", new Date());
+
+                Log.d(TAG, "Posting request for user " + requester.getObjectId() +
+                        " at " + pickupLocation.toString());
+                request.saveInBackground(new SaveCallback() {
+
+                    @Override
+                    public void done(ParseException e) {
+                        String status = null;
+                        if (e != null) {
+                            Log.d(TAG, "Error posting request: " + e.getMessage());
+                            status = "Error posting request!";
+                        }
+                        updateRequestStateUI(status);
+                    }
+                });
+                return;
+        }
+        Log.d(TAG, "Error posting request: No anonymous user");
+    }
+
+    private void cancelRequest() {
+        Log.d(TAG, "Cancel request");
+        final ParseUser requester = ParseUser.getCurrentUser();
+
+        if (requester != null) {
+                ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+                query.whereEqualTo("requester", requester);
+
+                Log.d(TAG, "Finding requests for user " + requester.getObjectId());
+                query.findInBackground(new FindCallback<ParseObject>() {
+
+                    @Override
+                    public void done(List<ParseObject> objects, ParseException e1) {
+                        if (e1 != null) {
+                            Log.d(TAG, "Error canceling request: " + e1.getMessage());
+                            updateRequestStateUI("Error canceling request");
+                        } else {
+                            if (objects.isEmpty()) {
+                                Log.d(TAG, "Error canceling request: No pending requests");
+                                resetRequestState();
+                                updateRequestStateUI("No pending requests");
+                            } else {
+                                Log.d(TAG, "Deleting " + Integer.toString(objects.size()) +
+                                        " request(s) for user " + requester.getObjectId());
+                                ParseObject.deleteAllInBackground(objects, new DeleteCallback() {
+
+                                    @Override
+                                    public void done(ParseException e2) {
+                                        String status = null;
+                                        if (e2 != null) {
+                                            Log.d(TAG, "Error deleting requests: " + e2.getMessage());
+                                            status = "Error deleting requests";
+                                        } else {
+                                            resetRequestState();
+                                        }
+                                        updateRequestStateUI(status);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+                return;
+        }
+        Log.d(TAG, "Error canceling request: No anonymous user");
+    }
+
+    private int getRequestState() {
+        return (mRequestId == null) ?
+            REQUEST_NONE : ((mDriverId == null) ? REQUEST_ACTIVE : REQUEST_ASSIGNED);
+    }
+
+    private void resetRequestState() {
+        mRequestId = null;
+        mDriverId = null;
+        mDriverLocation = null;
+    }
+
+    private void updateRequestStateUI(String status) {
+        int requestState = getRequestState();
+        Log.d(TAG, "updateRequestStateUI " + REQUEST_STATES[requestState]);
+        if (requestState != REQUEST_NONE) {
+            mFab.setImageResource(R.drawable.ic_clear_black_24dp);
+            mFab.setContentDescription("Cancel your request");
+            if (status == null) {
+                status = "Finding a driver.  Click to cancel.";
+            }
+        } else {
+            mFab.setImageResource(R.drawable.ic_add_black_24dp);
+            mFab.setContentDescription("Request a driver");
+            if (status == null) {
+                status = "Click to request a driver...";
+            }
+        }
+        Snackbar snackbar = Snackbar.make(mLayout, status, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
+    // Setup a recurring alarm every 5 seconds
+    private void scheduleRequestStatusAlarm(String logMessage) {
+        Assert.assertNotNull(mStatusReceiver);
+        Assert.assertNotNull(mAlarmManager);
+        Assert.assertNotNull(mStatusAlarmIntent);
+        Log.d(TAG, "scheduleRequestStatusAlarm (" + logMessage + ")");
+
+        // Set the result receiver
+        IntentFilter filter = new IntentFilter(RequestStatusService.ACTION_GET_RIDER_REQUEST_STATUS);
+        LocalBroadcastManager.getInstance(this).registerReceiver(mStatusReceiver, filter);
+
+        // Set the repeating alarm
+        long interval = 5000;
+        long now = SystemClock.elapsedRealtime();
+        Log.d(TAG, "Setting alarm, time=" + String.valueOf(now));
+        mAlarmManager.setInexactRepeating(
+                AlarmManager.ELAPSED_REALTIME, interval, interval, mStatusAlarmIntent);
+    }
+
+    // Cancel the pending intent
+    private void cancelRequestStatusAlarm() {
+        Assert.assertNotNull(mStatusReceiver);
+        Assert.assertNotNull(mAlarmManager);
+        Assert.assertNotNull(mStatusAlarmIntent);
+
+        Log.d(TAG, "Canceling 5 second repeating alarm");
+        mAlarmManager.cancel(mStatusAlarmIntent);
+
+        Log.d(TAG, "Unregistering getRequestStatus receiver");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
     }
 }
 

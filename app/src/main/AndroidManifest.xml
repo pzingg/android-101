@@ -54,19 +54,29 @@
         <activity
             android:name=".DriverMapActivity"
             android:label="@string/title_activity_driver_map"/>
+
         <service
             android:name=".RequestStatusService"
-            android:exported="true">
+            android:exported="false">
         </service>
+
+        <!--
+             This receiver is a static inner class instantiated by a repeating alarm.
+             The android:exported attribute must be set to true.
+        -->
         <receiver
             android:name=".RiderMapActivity$RequestStatusAlarmReceiver"
             android:enabled="true"
             android:exported="true">
         </receiver>
+
+        <!--
+             This receiver is instantiated by the activity and doesn't need to be published.
         <receiver
             android:name=".RiderMapActivity$RequestStatusReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
         </receiver>
+        -->
     </application>
 </manifest>

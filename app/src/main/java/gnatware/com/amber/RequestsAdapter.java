@@ -131,12 +131,12 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     // For debugging purposes
     public void cancelAcceptedRequests() {
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-        query.whereExists("driverId");
+        query.whereExists("driver");
         query.findInBackground(new FindCallback<ParseObject>() {
             @Override
             public void done(List<ParseObject> objects, ParseException e) {
                 for (ParseObject object : objects) {
-                    object.remove("driverId");
+                    object.remove("driver");
                     object.remove("driverLat");
                     object.remove("driverLng");
                     object.remove("acceptedAt");
@@ -148,8 +148,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
     // Do an async Parse query and cache the results in the adapter's mRequests array
     public void updateRequests() {
-        ParseQuery<ParseObject> queryAccepted = new ParseQuery<ParseObject>("Request");
-        queryAccepted.whereEqualTo("driverId", mDriver.getObjectId());
+        final ParseQuery<ParseObject> queryAccepted = new ParseQuery<ParseObject>("Request");
+        queryAccepted.whereEqualTo("driver", mDriver);
         queryAccepted.getFirstInBackground(new GetCallback<ParseObject>() {
 
             @Override
@@ -162,7 +162,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                     mRequests.add(new RiderRequest(
                             request.getObjectId(),
                             true,
-                            request.getString("requesterId"),
+                            request.getParseUser("requester").getObjectId(),
                             request.getParseGeoPoint("pickupLocation"),
                             mDriverLocation));
                     // Update view
@@ -170,8 +170,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                     notifyDataSetChanged();
                 } else {
                     ParseQuery<ParseObject> queryAvailable = new ParseQuery<ParseObject>("Request");
-                    queryAvailable.whereDoesNotExist("driverId");
-                    queryAvailable.whereNotEqualTo("requesterId", mDriver.getObjectId());
+                    queryAvailable.whereDoesNotExist("driver");
+                    queryAvailable.whereNotEqualTo("requester", mDriver);
                     queryAvailable.whereNear("pickupLocation", mDriverLocation);
                     queryAvailable.setLimit(100);
                     queryAvailable.findInBackground(new FindCallback<ParseObject>() {
@@ -187,7 +187,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                                     mRequests.add(new RiderRequest(
                                             request.getObjectId(),
                                             false,
-                                            request.getString("requesterId"),
+                                            request.getParseUser("requester").getObjectId(),
                                             request.getParseGeoPoint("pickupLocation"),
                                             mDriverLocation));
                                 }

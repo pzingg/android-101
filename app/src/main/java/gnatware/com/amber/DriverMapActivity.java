@@ -50,7 +50,119 @@ public class DriverMapActivity extends AppCompatActivity implements
     private LatLng mPickupLocation;
     private LatLng mDriverLocation;
 
-    protected void updateMap() {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate");
+
+        initializeState();
+        updateDriverLocation(null);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause");
+
+        mApplication.removeLocationUpdates(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume");
+
+        mApplication.requestLocationUpdates(this);
+        updateDriverLocation(null);
+    }
+
+    // ViewTreeObserver.OnGlobalLayoutListener method
+    @Override
+    public void onGlobalLayout() {
+        Log.d(TAG, "onGlobalLayout");
+
+        // At this point, the UI is fully displayed
+        mLayoutComplete = true;
+        updateDriverLocation(null);
+    }
+
+
+    /**
+     * Manipulates the map once available.
+     * This callback is triggered when the map is ready to be used.
+     * This is where we can add markers or lines, add listeners or move the camera.
+     * If Google Play services is not installed on the device, the user will be prompted to install
+     * it inside the SupportMapFragment. This method will only be triggered once the user has
+     * installed Google Play services and returned to the app.
+     */
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        Log.d(TAG, "onMapReady");
+        mMap = googleMap;
+
+        updateDriverLocation(null);
+    }
+
+    // LocationListener methods
+    @Override
+    public void onLocationChanged(Location location) {
+        updateDriverLocation(location);
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    private void initializeState() {
+        mLayoutComplete = false;
+        mApplication = (AmberApplication) getApplication();
+
+        Intent intent = getIntent();
+        mRequestId = intent.getStringExtra("requestId");
+        mRequesterId = intent.getStringExtra("requesterId");
+        double pickupLatitude = intent.getDoubleExtra("pickupLatitude", 0.);
+        double pickupLongitude = intent.getDoubleExtra("pickupLongitude", 0.);
+        mPickupLocation = new LatLng(pickupLatitude, pickupLongitude);
+        double driverLatitude = intent.getDoubleExtra("driverLatitude", 0.);
+        double driverLongitude = intent.getDoubleExtra("driverLongitude", 0.);
+        mDriverLocation = new LatLng(driverLatitude, driverLongitude);
+
+        // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
+        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_driver_map, null);
+        mLayout.getViewTreeObserver().addOnGlobalLayoutListener(this);
+        setContentView(mLayout);
+
+        mFab = (FloatingActionButton) findViewById(R.id.driver_map_fab);
+        mFab.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "FAB clicked");
+                acceptRequest();
+            }
+        });
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.driver_map);
+        mapFragment.getMapAsync(this);
+
+        mApplication.requestLocationUpdates(this);
+    }
+
+    private void updateMap() {
+        Log.d(TAG, "updateMap");
         if (mMap == null) {
             Log.d(TAG, "No map");
         } else if (mRequesterId == null) {
@@ -84,7 +196,8 @@ public class DriverMapActivity extends AppCompatActivity implements
         }
     }
 
-    protected void updateDriverLocation(Location location) {
+    private void updateDriverLocation(Location location) {
+        Log.d(TAG, "updateDriverLocation");
         if (location == null) {
             location = mApplication.getLastKnownLocation();
             if (location == null) {
@@ -97,7 +210,8 @@ public class DriverMapActivity extends AppCompatActivity implements
         updateMap();
     }
 
-    protected void acceptRequest() {
+    private void acceptRequest() {
+        Log.d(TAG, "acceptRequest");
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
         query.getInBackground(mRequestId, new GetCallback<ParseObject>() {
 
@@ -109,7 +223,7 @@ public class DriverMapActivity extends AppCompatActivity implements
                             mRequestId + ": " + e1.getMessage();
                 } else if (object == null) {
                     message = "Request " + mRequestId + " no longer exists";
-                } else if (object.getString("driverId") != null) {
+                } else if (object.getParseUser("driver") != null) {
                     message = "Request " + mRequestId + " has been accepted by another driver";
                 }
                 if (message != null) {
@@ -122,8 +236,8 @@ public class DriverMapActivity extends AppCompatActivity implements
                 } else {
 
                     // Request still available, book it and show directions
-                    String driverId = ParseUser.getCurrentUser().getObjectId();
-                    object.put("driverId", driverId);
+                    ParseUser driver = ParseUser.getCurrentUser();
+                    object.put("driver", driver);
                     object.put("driverLat", mDriverLocation.latitude);
                     object.put("driverLng", mDriverLocation.longitude);
                     object.put("acceptedAt", new Date());
@@ -168,112 +282,4 @@ public class DriverMapActivity extends AppCompatActivity implements
             }
         });
     }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        Log.d(TAG, "onCreate");
-        mLayoutComplete = false;
-
-        Intent intent = getIntent();
-        mRequestId = intent.getStringExtra("requestId");
-        mRequesterId = intent.getStringExtra("requesterId");
-        double pickupLatitude = intent.getDoubleExtra("pickupLatitude", 0.);
-        double pickupLongitude = intent.getDoubleExtra("pickupLongitude", 0.);
-        mPickupLocation = new LatLng(pickupLatitude, pickupLongitude);
-        double driverLatitude = intent.getDoubleExtra("driverLatitude", 0.);
-        double driverLongitude = intent.getDoubleExtra("driverLongitude", 0.);
-        mDriverLocation = new LatLng(driverLatitude, driverLongitude);
-
-        mApplication = (AmberApplication) getApplication();
-
-        // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
-        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_driver_map, null);
-        mLayout.getViewTreeObserver().addOnGlobalLayoutListener(this);
-        setContentView(mLayout);
-
-        mFab = (FloatingActionButton) findViewById(R.id.driver_map_fab);
-        mFab.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "FAB clicked");
-                acceptRequest();
-            }
-        });
-
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.driver_map);
-        mapFragment.getMapAsync(this);
-
-        mApplication.requestLocationUpdates(this);
-        updateDriverLocation(null);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        mApplication.removeLocationUpdates(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        mApplication.requestLocationUpdates(this);
-        updateDriverLocation(null);
-    }
-
-    // ViewTreeObserver.OnGlobalLayoutListener method
-    @Override
-    public void onGlobalLayout() {
-        Log.d(TAG, "onGlobalLayout");
-
-        // At this point, the UI is fully displayed
-        mLayoutComplete = true;
-        updateDriverLocation(null);
-    }
-
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-
-        Log.d(TAG, "onMapReady");
-        mMap = googleMap;
-
-        updateDriverLocation(null);
-    }
-
-    // LocationListener methods
-    @Override
-    public void onLocationChanged(Location location) {
-        updateDriverLocation(location);
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
 }
