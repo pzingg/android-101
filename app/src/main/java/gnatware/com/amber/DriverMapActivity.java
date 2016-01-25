@@ -123,6 +123,7 @@ public class DriverMapActivity extends AppCompatActivity implements
 
     }
 
+    // Private methods
     private void initializeState() {
         mLayoutComplete = false;
         mApplication = (AmberApplication) getApplication();
@@ -160,7 +161,7 @@ public class DriverMapActivity extends AppCompatActivity implements
         mApplication.requestLocationUpdates(this);
     }
 
-    public void showSnack(String message) {
+    private void showSnack(String message) {
         Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
         snackbar.show();
     }

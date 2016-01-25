@@ -29,7 +29,60 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate");
 
+        initializeState();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause");
+
+        mApplication.removeLocationUpdates(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume");
+
+        mApplication.requestLocationUpdates(this);
+        updateDriverLocation(null);
+    }
+
+    // LocationListener methods
+    @Override
+    public void onLocationChanged(Location location) {
+
+        updateDriverLocation(location);
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    // Public methods
+
+    // Public access for RequestsAdapter access
+    public void showSnack(String message) {
+        Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
+        snackbar.show();
+    }
+
+    // Private methods
+    private void initializeState() {
         mApplication = (AmberApplication) getApplication();
 
         mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_driver_requests, null);
@@ -61,42 +114,11 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
         }
         rvRequests.setAdapter(mRequestsAdapter);
 
-
         // Set layout manager to position the items
         rvRequests.setLayoutManager(new LinearLayoutManager(this));
-
-        mApplication.requestLocationUpdates(this);
-        updateDriverLocation(null);
     }
 
-    // LocationListener methods
-    @Override
-    public void onLocationChanged(Location location) {
-
-        updateDriverLocation(location);
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
-    public void showSnack(String message) {
-        Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
-        snackbar.show();
-    }
-
-    protected void updateDriverLocation(Location location) {
+    private void updateDriverLocation(Location location) {
         if (location == null) {
             location = mApplication.getLastKnownLocation();
             if (location == null) {

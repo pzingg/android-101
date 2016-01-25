@@ -235,6 +235,7 @@ public class RiderMapActivity extends AppCompatActivity implements
         updateRiderLocation(null);
     }
 
+    // Private methods
     private void initializeState() {
         mLayoutComplete = false;
 
@@ -273,7 +274,7 @@ public class RiderMapActivity extends AppCompatActivity implements
         mapFragment.getMapAsync(this);
     }
 
-    public void showSnack(String message) {
+    private void showSnack(String message) {
         Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
         snackbar.show();
     }
@@ -516,6 +517,7 @@ public class RiderMapActivity extends AppCompatActivity implements
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked OK button
 
+                        // TODO: Create a signup-only fragment or activity
                         ParseLoginBuilder builder = new ParseLoginBuilder(RiderMapActivity.this);
                         builder.setParseLoginButtonText("Log in?");
                         startActivityForResult(builder.build(), 0);
@@ -529,6 +531,7 @@ public class RiderMapActivity extends AppCompatActivity implements
                     }
                 });
         AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void logInUser() {

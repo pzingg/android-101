@@ -29,13 +29,15 @@ import java.util.List;
 /**
  * Created by pzingg on 1/10/16.
  */
+
+// Adapter for RecyclerView
 public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHolder> {
 
     public static final String TAG = "RequestsAdapter";
 
+    // Two different tile layouts depending on whether request has been accepted or not.
     public static final int VIEW_TYPE_AVAILABLE_REQUEST = 1;
     public static final int VIEW_TYPE_ACCEPTED_REQUEST = 2;
-
 
     // Member variables for requests and Parse query parameters
     private ParseUser mDriver;
@@ -43,6 +45,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     private ParseGeoPoint mDriverLocation;
     private List<RiderRequest> mRequests;
 
+    // Static inner class. ViewHolder insstances are created in outer class's
+    // onCreateViewHolder method.
     public static class ViewHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener {
 
@@ -126,42 +130,59 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         mRequests = new ArrayList<RiderRequest>();
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        int viewType = VIEW_TYPE_AVAILABLE_REQUEST;
+        if (mRequests.size() > position) {
+            RiderRequest request = mRequests.get(position);
+            if (request.accepted) {
+                viewType = VIEW_TYPE_ACCEPTED_REQUEST;
+            }
+        }
+        return viewType;
+    }
+
+    @Override
+    public RequestsAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+
+        // Inflate the item custom layout and return ViewHolder instance
+        Context context = parent.getContext();
+        LayoutInflater inflater = LayoutInflater.from(context);
+        int itemId = viewType == VIEW_TYPE_ACCEPTED_REQUEST ?
+                R.layout.item_accepted_request : R.layout.item_available_request;
+
+        View requestItem = inflater.inflate(itemId, parent, false);
+        return new ViewHolder(this, requestItem, viewType);
+    }
+
+    // Display the data from a specific item within the ViewHolder
+    @Override
+    public void onBindViewHolder(RequestsAdapter.ViewHolder viewHolder, int position) {
+
+        // Get request data from cached array and bind it to the ViewHolder
+        RiderRequest request = mRequests.get(position);
+        Log.d(TAG, "onBindViewHolder, request[" + Integer.toString(position) + "]: " +
+                request.toString());
+        viewHolder.bind(request);
+    }
+
+    // Return the total count of items in our cached array
+    @Override
+    public int getItemCount() {
+         return mRequests.size();
+    }
+
+    // Public methods
+    // Public access for DriverRequestsActivity
     public void updateDriverLocation(LatLng location) {
         mDriverLocation = new ParseGeoPoint(location.latitude, location.longitude);
         updateRequests();
     }
 
-    public void cancelRequest(final String requestId) {
-        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
-        query.getInBackground(requestId, new GetCallback<ParseObject>() {
-
-            @Override
-            public void done(ParseObject request, ParseException e) {
-                if (request == null) {
-                    Log.d(TAG, "Could not get request " + requestId);
-                } else {
-                    Date now = new Date();
-                    request.put("canceledAt", now);
-                    request.put("cancellationReason", "Canceled by driver...");
-                    Log.d(TAG, "Canceling request " + requestId);
-                    request.saveInBackground(new SaveCallback() {
-
-                        @Override
-                        public void done(ParseException e) {
-                            Log.d(TAG, "Request " + requestId + " canceled by driver");
-
-                            // TODO: Notify rider (push notification?)
-                            mActivity.showSnack("Request canceled");
-                            updateRequests();
-                        }
-                    });
-                }
-            }
-        });
-    }
+    // Private methods
 
     // Do an async Parse query and cache the results in the adapter's mRequests array
-    public void updateRequests() {
+    private void updateRequests() {
         final ParseQuery<ParseObject> queryAccepted = new ParseQuery<ParseObject>("Request");
         queryAccepted.whereDoesNotExist("canceledAt");
         queryAccepted.whereEqualTo("driver", mDriver);
@@ -218,45 +239,32 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         });
     }
 
-    @Override
-    public int getItemViewType(int position) {
-        int viewType = VIEW_TYPE_AVAILABLE_REQUEST;
-        if (mRequests.size() > position) {
-            RiderRequest request = mRequests.get(position);
-            if (request.accepted) {
-                viewType = VIEW_TYPE_ACCEPTED_REQUEST;
+    private void cancelRequest(final String requestId) {
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+        query.getInBackground(requestId, new GetCallback<ParseObject>() {
+
+            @Override
+            public void done(ParseObject request, ParseException e) {
+                if (request == null) {
+                    Log.d(TAG, "Could not get request " + requestId);
+                } else {
+                    Date now = new Date();
+                    request.put("canceledAt", now);
+                    request.put("cancellationReason", "Canceled by driver...");
+                    Log.d(TAG, "Canceling request " + requestId);
+                    request.saveInBackground(new SaveCallback() {
+
+                        @Override
+                        public void done(ParseException e) {
+                            Log.d(TAG, "Request " + requestId + " canceled by driver");
+
+                            // TODO: Notify rider (push notification?)
+                            mActivity.showSnack("Request canceled");
+                            updateRequests();
+                        }
+                    });
+                }
             }
-        }
-        return viewType;
+        });
     }
-
-    // @Override
-    public RequestsAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-
-        // Inflate the item custom layout and return ViewHolder instance
-        Context context = parent.getContext();
-        LayoutInflater inflater = LayoutInflater.from(context);
-        int itemId = viewType == VIEW_TYPE_ACCEPTED_REQUEST ?
-                R.layout.item_accepted_request : R.layout.item_available_request;
-
-        View requestItem = inflater.inflate(itemId, parent, false);
-        return new ViewHolder(this, requestItem, viewType);
-    }
-
-    // Display the data from a specific item within the ViewHolder
-    @Override
-    public void onBindViewHolder(RequestsAdapter.ViewHolder viewHolder, int position) {
-
-        // Get request data from cached array and bind it to the ViewHolder
-        RiderRequest request = mRequests.get(position);
-        Log.d(TAG, "onBindViewHolder, request[" + Integer.toString(position) + "]: " +
-                request.toString());
-        viewHolder.bind(request);
-    }
-
-     // Return the total count of items in our cached array
-     // @Override
-     public int getItemCount() {
-         return mRequests.size();
-     }
 }

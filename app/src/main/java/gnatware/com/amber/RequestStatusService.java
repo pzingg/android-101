@@ -79,14 +79,15 @@ public class RequestStatusService extends IntentService {
         }
     }
 
-    /**
-     * Handle an action  in the provided background thread with the provided parameters.
-     */
+    // Private methods
+
+    // Handle an action  in the provided background thread with the provided parameters.
     private void getRequestStatus(String requestId) {
         Log.d(TAG, "getRequestStatus for request " + requestId);
 
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
         query.whereEqualTo("objectId", requestId);
+        query.whereDoesNotExist("canceledAt");
         query.include("requester");
         query.include("driver");
         performQueryAndSendResult(query, true, ACTION_GET_REQUEST_STATUS);
@@ -100,6 +101,7 @@ public class RequestStatusService extends IntentService {
         userQuery.whereEqualTo("objectId", requesterId);
 
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
+        query.whereDoesNotExist("canceledAt");
         query.whereMatchesQuery("requester", userQuery);
         query.include("requester");
         query.include("driver");
