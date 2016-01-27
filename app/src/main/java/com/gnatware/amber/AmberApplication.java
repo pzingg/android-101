@@ -1,21 +1,19 @@
 package com.gnatware.amber;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.support.multidex.MultiDexApplication;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.parse.FindCallback;
-import com.parse.GetCallback;
 import com.parse.Parse;
 import com.parse.ParseACL;
-import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
@@ -24,15 +22,20 @@ import com.parse.ParseUser;
 import com.parse.SaveCallback;
 import com.parse.ui.ParseLoginConfig;
 
+import junit.framework.Assert;
+
 import java.util.Date;
 import java.util.List;
 
 /**
  * Created by pzingg on 1/9/16.
  */
-public class AmberApplication extends Application {
 
-    public static final String TAG = "AmberApplication";
+// A MultiDexApplication.
+// Over 64k methods, thanks to Google Maps and Facebook
+public class AmberApplication extends MultiDexApplication {
+
+    public static final String LOG_TAG = "AmberApplication";
 
     private LocationManager mLocationManager;
     private String mProvider;
@@ -52,10 +55,31 @@ public class AmberApplication extends Application {
     // TODO: Enable push notifications when requests are canceled
     // https://www.parse.com/tutorials/android-push-notifications
 
+    static public void startSignInActivity(Activity from) {
+        Log.d(LOG_TAG, "startSignInActivity");
+
+        // Reuse Parse config for our sign-in fragments
+        ParseLoginConfig config = new ParseLoginConfig();
+        config.setParseLoginEnabled(true);
+        config.setParseLoginEmailAsUsername(true);
+        config.setParseSignupMinPasswordLength(6);
+        config.setFacebookLoginEnabled(true);
+        config.setTwitterLoginEnabled(true);
+
+        Intent signInIntent = new Intent(from, SignInActivity.class);
+        signInIntent.putExtras(config.toBundle());
+
+        from.startActivityForResult(signInIntent, 0);
+        Log.d(LOG_TAG, "signInActivityStarted");
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "onCreate");
+        Log.d(LOG_TAG, "onCreate");
+
+        // Check our keys
+        assertGoogleMapsKey();
 
         // Enable Local Datastore.
         Parse.enableLocalDatastore(this);
@@ -80,21 +104,21 @@ public class AmberApplication extends Application {
 
     public void removeLocationUpdates(LocationListener listener) {
         // Updates every 400 ms, or 1 degree change
-        Log.d(TAG, "Removing location updates for listener " + listener);
+        Log.d(LOG_TAG, "Removing location updates for listener " + listener);
         try {
             mLocationManager.removeUpdates(listener);
         } catch (SecurityException e) {
-            Log.e(TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "Location permission not granted");
         }
     }
 
     public void requestLocationUpdates(LocationListener listener) {
         // Updates every 400 ms, or 1 degree change
-        Log.d(TAG, "Requesting location updates for listener " + listener + " with provider " + mProvider);
+        Log.d(LOG_TAG, "Requesting location updates for listener " + listener + " with provider " + mProvider);
         try {
             mLocationManager.requestLocationUpdates(mProvider, 400, 1, listener);
         } catch (SecurityException e) {
-            Log.e(TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "Location permission not granted");
         }
     }
 
@@ -103,7 +127,7 @@ public class AmberApplication extends Application {
         try {
             location = mLocationManager.getLastKnownLocation(mProvider);
         } catch (SecurityException e) {
-            Log.e(TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "Location permission not granted");
         }
         return location;
     }
@@ -122,12 +146,12 @@ public class AmberApplication extends Application {
     public void updateDriverLocation(LatLng location) {
         ParseUser driver = ParseUser.getCurrentUser();
         if (driver != null && driver.getString("role") == "driver") {
-            Log.d(TAG, "updateDriverLocation: Saving driver location");
+            Log.d(LOG_TAG, "updateDriverLocation: Saving driver location");
             driver.put("lastLocation", new ParseGeoPoint(location.latitude, location.longitude));
             driver.put("lastLocationAt", new Date());
             driver.saveEventually();
         } else {
-            Log.d(TAG, "updateDriverLocation: Current user is not a driver");
+            Log.d(LOG_TAG, "updateDriverLocation: Current user is not a driver");
         }
     }
 
@@ -147,7 +171,7 @@ public class AmberApplication extends Application {
                     request.saveInBackground(new SaveCallback() {
                         @Override
                         public void done(ParseException e) {
-                            Log.d(TAG, "Request " + requestId + " canceled for debugging");
+                            Log.d(LOG_TAG, "Request " + requestId + " canceled for debugging");
                             // TODO: Notify rider and driver (push notification?)
                         }
                     });
@@ -156,20 +180,12 @@ public class AmberApplication extends Application {
         });
     }
 
-    public void startSignInActivity(Activity context) {
+    private void assertGoogleMapsKey() {
 
-        // Reuse Parse config for our sign-in fragments
-        ParseLoginConfig config = new ParseLoginConfig();
-        config.setParseLoginEnabled(true);
-        config.setParseLoginEmailAsUsername(true);
-        config.setParseSignupMinPasswordLength(6);
-        config.setFacebookLoginEnabled(true);
-        config.setTwitterLoginEnabled(true);
-
-        Intent signInIntent = new Intent(context, SignInActivity.class);
-        signInIntent.putExtras(config.toBundle());
-
-        context.startActivityForResult(signInIntent, 0);
+        // All Google Maps keys are supposed to start with "AIza"
+        // Make sure we can read this resource and it has the right prefix
+        Log.d(LOG_TAG, "Checking Google Maps key");
+        String key = getString(R.string.google_maps_key);
+        Assert.assertEquals("AIza", key.substring(0, 4));
     }
-
 }

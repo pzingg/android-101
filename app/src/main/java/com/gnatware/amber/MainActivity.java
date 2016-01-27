@@ -19,7 +19,6 @@ import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseUser;
 import com.parse.SaveCallback;
-import com.parse.ui.ParseLoginConfig;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -92,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
                 if (e != null) {
                     Log.d(LOG_TAG, "onLoginClicked, could not log out: " + e.getMessage());
                 }
-                mApplication.startSignInActivity(MainActivity.this);
+                AmberApplication.startSignInActivity(MainActivity.this);
             }
         });
     }
@@ -238,13 +237,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void askUserToLogIn() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.user_login_required_message)
-                .setTitle(R.string.user_login_required_title)
+        builder.setMessage(R.string.login_required_existing_message)
+                .setTitle(R.string.login_required_title)
                 .setPositiveButton(R.string.com_parse_ui_parse_login_button_label, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
 
                         // User clicked OK button
-                        mApplication.startSignInActivity(MainActivity.this);
+                        AmberApplication.startSignInActivity(MainActivity.this);
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {

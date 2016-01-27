@@ -2,16 +2,13 @@ package com.gnatware.amber;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
-import android.view.Window;
 
-import com.parse.Parse;
 import com.parse.ParseFacebookUtils;
 import com.parse.ui.ParseOnLoadingListener;
 
@@ -23,32 +20,46 @@ public class SignInActivity extends AppCompatActivity implements
         LoginFragmentListener,
         ParseOnLoadingListener {
 
-    public static final String LOG_TAG = "ParseLoginActivity";
+    public static final String LOG_TAG = "SignInActivity";
 
     public static final String EMAIL_ADDRESS = "com.gnatware.amber.SignInActivity.EMAIL_ADDRESS";
     public static final String USER_OBJECT_NAME_FIELD = "name";
 
     // All login UI fragment transactions will happen within this parent layout element.
     // Change this if you are modifying this code to be hosted in your own activity.
-    private final int mContainerViewId = R.id.activity_sign_in;
+    private int mContainerViewId;
 
+    private CoordinatorLayout mLayout;
     private ProgressDialog mProgressDialog;
     private Bundle mConfigOptions;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(LOG_TAG, "onCreate");
+
+        // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
+        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_sign_in, null);
+        if (mLayout != null) {
+            setContentView(mLayout);
+            mContainerViewId = mLayout.getId();
+        } else {
+            mContainerViewId = android.R.id.content;
+        }
 
         // Disable landscape
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        // this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        // Log.d(LOG_TAG, "onCreate - requested portrait");
 
-        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        // this.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        // Combine options from incoming intent and the activity metadata
-        mConfigOptions = getMergedOptions();
+        mConfigOptions = getIntent().getExtras();
+        Log.d(LOG_TAG, "onCreate - got options");
 
         // Show the unified sign-in / sign-up form
         if (savedInstanceState == null) {
+            Log.d(LOG_TAG, "onCreate - new instance state");
+
             FragmentManager fragmentManager = getSupportFragmentManager();
             FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
             SignInFragment fragment = SignInFragment.newInstance(mConfigOptions);
@@ -196,31 +207,4 @@ public class SignInActivity extends AppCompatActivity implements
             mProgressDialog.dismiss();
         }
     }
-
-    private Bundle getMergedOptions() {
-        // Read activity metadata from AndroidManifest.xml
-        ActivityInfo activityInfo = null;
-        try {
-            activityInfo = getPackageManager().getActivityInfo(
-                    this.getComponentName(), PackageManager.GET_META_DATA);
-        } catch (PackageManager.NameNotFoundException e) {
-            if (Parse.getLogLevel() <= Parse.LOG_LEVEL_ERROR &&
-                    Log.isLoggable(LOG_TAG, Log.WARN)) {
-                Log.w(LOG_TAG, e.getMessage());
-            }
-        }
-
-        // The options specified in the Intent (from ParseLoginBuilder) will
-        // override any duplicate options specified in the activity metadata
-        Bundle mergedOptions = new Bundle();
-        if (activityInfo != null && activityInfo.metaData != null) {
-            mergedOptions.putAll(activityInfo.metaData);
-        }
-        if (getIntent().getExtras() != null) {
-            mergedOptions.putAll(getIntent().getExtras());
-        }
-
-        return mergedOptions;
-    }
-
 }

@@ -8,6 +8,7 @@ import android.content.Context;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.view.View;
 
 import com.parse.ui.ParseLoginConfig;
@@ -20,6 +21,9 @@ import com.parse.ui.ParseOnLoadingListener;
  * create an instance of this fragment.
  */
 public class LoginFragmentBase extends Fragment {
+
+    public static final String LOG_TAG = "LoginFragmentBase";
+
     protected ParseLoginConfig mParseLoginConfig;
 
     protected LoginFragmentListener mLoginFragmentListener;
@@ -30,6 +34,7 @@ public class LoginFragmentBase extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
+        Log.d(LOG_TAG, "onAttach");
 
         if (context instanceof LoginFragmentListener) {
             mLoginFragmentListener = (LoginFragmentListener) context;
@@ -48,6 +53,7 @@ public class LoginFragmentBase extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
+        Log.d(LOG_TAG, "onDetach");
 
         mLoginFragmentListener = null;
         mLoadingListener = null;

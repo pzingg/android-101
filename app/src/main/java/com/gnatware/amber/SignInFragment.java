@@ -1,14 +1,6 @@
 package com.gnatware.amber;
 
-import android.annotation.TargetApi;
-import android.app.Activity;
-import android.content.Context;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -17,14 +9,12 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.facebook.AccessToken;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.parse.GetCallback;
 import com.parse.LogInCallback;
-import com.parse.Parse;
 import com.parse.ParseException;
 import com.parse.ParseFacebookUtils;
 import com.parse.ParseQuery;
@@ -33,7 +23,6 @@ import com.parse.ParseUser;
 import com.parse.SaveCallback;
 import com.parse.twitter.Twitter;
 import com.parse.ui.ParseLoginConfig;
-import com.parse.ui.ParseOnLoadingListener;
 
 import org.json.JSONObject;
 
@@ -77,9 +66,9 @@ public class SignInFragment extends LoginFragmentBase {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        Log.d(LOG_TAG, "onCreateView");
 
         mParseLoginConfig = ParseLoginConfig.fromBundle(getArguments(), getActivity());
-
         mLayout = inflater.inflate(R.layout.fragment_sign_in, container, false);
 
         mViwEmailLogin = mLayout.findViewById(R.id.emailSignInForm);
@@ -101,23 +90,6 @@ public class SignInFragment extends LoginFragmentBase {
         }
         return mLayout;
     }
-
-
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
-    public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
-    }
-
 
     // Private methods
     private void setUpEmailSignIn() {

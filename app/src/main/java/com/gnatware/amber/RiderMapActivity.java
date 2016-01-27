@@ -30,17 +30,14 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.parse.DeleteCallback;
 import com.parse.FindCallback;
-import com.parse.GetCallback;
-import com.parse.ParseAnalytics;
+import com.parse.ParseACL;
 import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.ParseUser;
-import com.parse.ParseACL;
 import com.parse.SaveCallback;
 
 import junit.framework.Assert;
@@ -63,14 +60,14 @@ public class RiderMapActivity extends AppCompatActivity implements
 
     private AmberApplication mApplication;
     private RequestStatusReceiver mStatusReceiver;
-    private AlarmManager mAlarmManager;
     private PendingIntent mStatusAlarmIntent;
+    private boolean mUsingAlarm;
 
     // Dynamic UI elements
     private FloatingActionButton mFab;
     private CoordinatorLayout mLayout;
 
-    private Boolean mLayoutComplete;
+    private boolean mLayoutComplete;
 
     // Current rider request status
     private String mRequestId;
@@ -193,6 +190,7 @@ public class RiderMapActivity extends AppCompatActivity implements
 
         // At this point, the UI is fully displayed
         mLayoutComplete = true;
+
         updateRiderLocation(null);
     }
 
@@ -236,17 +234,16 @@ public class RiderMapActivity extends AppCompatActivity implements
 
     // Private methods
     private void initializeState() {
+        mUsingAlarm = false;
         mLayoutComplete = false;
 
         mApplication = (AmberApplication) getApplication();
         mStatusReceiver = new RequestStatusReceiver();
-        mAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
-        // Create the pending intent from our receiver
-        // requestCode = 0
-        // flags = 0
-        Intent intent = new Intent(this, RequestStatusAlarmReceiver.class);
-        mStatusAlarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+        if (mUsingAlarm) {
+            Intent intent = new Intent(this, RequestStatusAlarmReceiver.class);
+            mStatusAlarmIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+        }
 
         // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
         mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_rider_map, null);
@@ -479,8 +476,6 @@ public class RiderMapActivity extends AppCompatActivity implements
     // Setup a recurring alarm every 5 seconds
     private void scheduleRequestStatusAlarm(String logMessage) {
         Assert.assertNotNull(mStatusReceiver);
-        Assert.assertNotNull(mAlarmManager);
-        Assert.assertNotNull(mStatusAlarmIntent);
         Log.d(LOG_TAG, "scheduleRequestStatusAlarm (" + logMessage + ")");
 
         // Set the result receiver
@@ -488,21 +483,28 @@ public class RiderMapActivity extends AppCompatActivity implements
         LocalBroadcastManager.getInstance(this).registerReceiver(mStatusReceiver, filter);
 
         // Set the repeating alarm
-        long interval = 5000;
-        long now = SystemClock.elapsedRealtime();
-        Log.d(LOG_TAG, "Setting alarm, time=" + String.valueOf(now));
-        mAlarmManager.setInexactRepeating(
-                AlarmManager.ELAPSED_REALTIME, interval, interval, mStatusAlarmIntent);
+        if (mUsingAlarm) {
+            Assert.assertNotNull(mStatusAlarmIntent);
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+            long interval = 5000;
+            long now = SystemClock.elapsedRealtime();
+            Log.d(LOG_TAG, "Setting alarm, time=" + String.valueOf(now));
+            alarmManager.setInexactRepeating(
+                    AlarmManager.ELAPSED_REALTIME, interval, interval, mStatusAlarmIntent);
+        }
     }
 
     // Cancel the pending intent
     private void cancelRequestStatusAlarm() {
         Assert.assertNotNull(mStatusReceiver);
-        Assert.assertNotNull(mAlarmManager);
-        Assert.assertNotNull(mStatusAlarmIntent);
 
-        Log.d(LOG_TAG, "Canceling 5 second repeating alarm");
-        mAlarmManager.cancel(mStatusAlarmIntent);
+        if (mUsingAlarm) {
+            Assert.assertNotNull(mStatusAlarmIntent);
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            Log.d(LOG_TAG, "Canceling 5 second repeating alarm");
+            alarmManager.cancel(mStatusAlarmIntent);
+        }
 
         Log.d(LOG_TAG, "Unregistering getRequestStatus receiver");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
@@ -510,13 +512,13 @@ public class RiderMapActivity extends AppCompatActivity implements
 
     private void askUserToSignIn() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.user_signup_required_message)
-                .setTitle(R.string.user_signup_required_title)
+        builder.setMessage(R.string.login_required_anonymous_message)
+                .setTitle(R.string.login_required_title)
                 .setPositiveButton(R.string.com_parse_ui_create_account_button_label, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked OK button
                         Log.d(LOG_TAG, "User clicked OK to sign in");
-                        mApplication.startSignInActivity(RiderMapActivity.this);
+                        AmberApplication.startSignInActivity(RiderMapActivity.this);
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
