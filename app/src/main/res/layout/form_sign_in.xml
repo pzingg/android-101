@@ -1,0 +1,43 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_height="wrap_content"
+    android:layout_width="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:id="@+id/emailSignInForm"
+    android:visibility="gone">
+
+    <EditText
+        android:id="@+id/edtEmailAddress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/ParseLoginUI.EditText"
+        android:hint="@string/com_parse_ui_username_input_hint" />
+
+    <LinearLayout
+        android:id="@+id/signInButtons"
+	    android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/com_parse_ui_large_vertical_spacing">
+
+        <Button
+            android:id="@+id/btnCancelSignIn"
+            style="@style/ParseLoginUI.Button"
+            android:layout_weight="0.5"
+            android:text="Cancel" />
+
+        <Button
+            android:id="@+id/btnNext"
+            style="@style/ParseLoginUI.Button"
+            android:layout_marginLeft="@dimen/com_parse_ui_small_horizontal_spacing"
+            android:layout_weight="0.5"
+            android:text="Next" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/parse_login_help"
+        style="@style/ParseLoginUI.HelpButton"
+        android:layout_marginTop="@dimen/com_parse_ui_small_vertical_spacing"
+        android:layout_marginBottom="@dimen/com_parse_ui_small_vertical_spacing"
+        android:text="@string/com_parse_ui_forgot_password_button_label" />
+</LinearLayout>

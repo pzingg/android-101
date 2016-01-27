@@ -1,7 +1,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="gnatware.com.amber.DriverRequestsActivity">
+    tools:context="com.gnatware.amber.DriverRequestsActivity">
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"

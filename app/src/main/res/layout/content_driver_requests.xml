@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#ECEFF1"
-    tools:context="gnatware.com.amber.DriverRequestsActivity"
+    tools:context="com.gnatware.amber.DriverRequestsActivity"
     tools:showIn="@layout/activity_driver_requests"
     android:id="@+id/rvNearbyRequests">
 

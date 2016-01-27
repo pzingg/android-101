@@ -9,13 +9,13 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="gnatware.com.amber.MainActivity"
+    tools:context="com.gnatware.amber.MainActivity"
     tools:showIn="@layout/activity_main">
 
     <Switch
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/swRiderOrDriver"
+        android:id="@+id/swiRiderOrDriver"
         android:layout_marginBottom="36dp"
         android:layout_above="@+id/btnGetStarted"
         android:layout_centerHorizontal="true" />
@@ -26,7 +26,7 @@
         android:text="Welcome"
         android:id="@+id/txtWelcome"
         android:gravity="center_horizontal"
-        android:layout_above="@+id/swRiderOrDriver"
+        android:layout_above="@+id/swiRiderOrDriver"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="24dp"
         android:layout_alignParentTop="false"
@@ -38,10 +38,10 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Rider"
         android:id="@+id/txtRider"
-        android:layout_alignTop="@+id/swRiderOrDriver"
+        android:layout_alignTop="@+id/swiRiderOrDriver"
         android:textAlignment="textEnd"
         android:layout_marginEnd="18dp"
-        android:layout_toStartOf="@+id/swRiderOrDriver"
+        android:layout_toStartOf="@+id/swiRiderOrDriver"
         android:textSize="20sp" />
 
     <TextView
@@ -50,9 +50,9 @@
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Driver"
         android:id="@+id/txtDriver"
-        android:layout_alignTop="@+id/swRiderOrDriver"
+        android:layout_alignTop="@+id/swiRiderOrDriver"
         android:layout_marginStart="18dp"
-        android:layout_toEndOf="@+id/swRiderOrDriver"
+        android:layout_toEndOf="@+id/swiRiderOrDriver"
         android:textSize="20sp" />
 
     <Button

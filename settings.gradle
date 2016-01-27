@@ -1,1 +1,1 @@
-include ':app', ':ParseUI-Login', ':ParseUI-Widget'
+include ':app'
