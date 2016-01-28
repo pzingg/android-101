@@ -51,6 +51,30 @@ public class MainActivity extends AppCompatActivity {
         updateLoginStateUI();
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) { // User pressed sign in button
+            if (resultCode >= RESULT_OK) {
+                showSnack("You are now signed in");
+                updateLoginStateUI();
+            } else if (resultCode == RESULT_CANCELED) {
+                // Do nothing
+            } else {
+                Log.d(LOG_TAG, "Unknown resultCode from sign in: " + String.valueOf(resultCode));
+            }
+        }
+        if (requestCode == 2) { // User accepted request to sign in
+            if (resultCode >= RESULT_OK) {
+                showSnack("Welcome back");
+                updateLoginStateUI();
+            } else if (resultCode == RESULT_CANCELED) {
+                // Do nothing
+            } else {
+                Log.d(LOG_TAG, "Unknown resultCode from sign in: " + String.valueOf(resultCode));
+            }
+        }
+    }
+
     /*
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -91,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
                 if (e != null) {
                     Log.d(LOG_TAG, "onLoginClicked, could not log out: " + e.getMessage());
                 }
-                AmberApplication.startSignInActivity(MainActivity.this);
+                AmberApplication.startSignInActivityForResult(MainActivity.this, 1);
             }
         });
     }
@@ -243,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int id) {
 
                         // User clicked OK button
-                        AmberApplication.startSignInActivity(MainActivity.this);
+                        AmberApplication.startSignInActivityForResult(MainActivity.this, 2);
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {

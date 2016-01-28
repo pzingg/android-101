@@ -9,7 +9,6 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
 
 import com.parse.ParseFacebookUtils;
 import com.parse.ui.ParseOnLoadingListener;
@@ -23,6 +22,11 @@ public class SignInActivity extends AppCompatActivity implements
         ParseOnLoadingListener {
 
     public static final String LOG_TAG = "SignInActivity";
+
+    public static final int RESULT_ACCOUNT_SIGNED_IN = RESULT_OK;
+    public static final int RESULT_ACCOUNT_CREATED = RESULT_FIRST_USER;
+    public static final int RESULT_FACEBOOK_LOGIN = RESULT_FIRST_USER+1;
+    public static final int RESULT_TWITTER_LOGIN = RESULT_FIRST_USER+2;
 
     public static final String EMAIL_ADDRESS = "com.gnatware.amber.SignInActivity.EMAIL_ADDRESS";
     public static final String USER_OBJECT_NAME_FIELD = "name";
@@ -40,17 +44,17 @@ public class SignInActivity extends AppCompatActivity implements
         // These must be called before super.onCreate
         // Force portrait, no titles, please
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        // this.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         super.onCreate(savedInstanceState);
 
         // Use a layout or android.R.id.content
-        // View contentView = (View) getLayoutInflater().inflate(R.layout.activity_sign_in, null);
-        View contentView = null;
-        if (contentView != null) {
-            mContainerViewId = View.generateViewId();
-            contentView.setId(mContainerViewId);
-            setContentView(contentView);
+        View layout = (View) getLayoutInflater().inflate(R.layout.activity_sign_in, null);
+        // A FrameLayout container (child view of the layout)
+        View containerView = layout.findViewById(R.id.signInContainer);
+        if (containerView != null) {
+            mContainerViewId = R.id.signInContainer;
+            setContentView(layout);
         } else {
             mContainerViewId = android.R.id.content;
         }
@@ -186,9 +190,7 @@ public class SignInActivity extends AppCompatActivity implements
     public void onLoginSuccess() {
         Log.d(LOG_TAG, "onLoginSuccess");
 
-        // This default implementation returns to the parent activity with RESULT_OK.
-        // TODO: Add intent with exsiting account info, or use RESULT_FIRST_USER+nnn
-        setResult(RESULT_OK);
+        setResult(RESULT_ACCOUNT_SIGNED_IN);
         finish();
     }
 
@@ -199,9 +201,7 @@ public class SignInActivity extends AppCompatActivity implements
     public void onCreateAccountSuccess() {
         Log.d(LOG_TAG, "onCreateAccountSuccess");
 
-        // This default implementation returns to the parent activity with RESULT_OK.
-        // TODO: Add intent with new account info, or use RESULT_FIRST_USER+nnn
-        setResult(RESULT_OK);
+        setResult(RESULT_ACCOUNT_CREATED);
         finish();
     }
 

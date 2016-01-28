@@ -55,7 +55,7 @@ public class AmberApplication extends MultiDexApplication {
     // TODO: Enable push notifications when requests are canceled
     // https://www.parse.com/tutorials/android-push-notifications
 
-    static public void startSignInActivity(Activity from) {
+    static public void startSignInActivityForResult(Activity from, int requestCode) {
         Log.d(LOG_TAG, "startSignInActivity");
 
         // Reuse Parse config for our sign-in fragments
@@ -69,7 +69,7 @@ public class AmberApplication extends MultiDexApplication {
         Intent signInIntent = new Intent(from, SignInActivity.class);
         signInIntent.putExtras(config.toBundle());
 
-        from.startActivityForResult(signInIntent, 0);
+        from.startActivityForResult(signInIntent, requestCode);
         Log.d(LOG_TAG, "signInActivityStarted");
     }
 

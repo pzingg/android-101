@@ -9,6 +9,7 @@
     <TextView
         android:id="@+id/txtEmailAddress"
         android:text="Email address"
+        android:textSize="28sp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 

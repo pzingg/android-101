@@ -1,9 +1,14 @@
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/existinAccountFragment"
+    android:id="@+id/existingAccountFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingTop="@dimen/com_parse_ui_vertical_margin"
+    android:paddingLeft="@dimen/com_parse_ui_horizontal_margin"
+    android:paddingRight="@dimen/com_parse_ui_horizontal_margin"
+    android:paddingBottom="@dimen/com_parse_ui_vertical_margin"
+    android:orientation="vertical"
     tools:context=".ExistingAccountFragment">
 
     <LinearLayout
@@ -18,9 +23,9 @@
             android:text="Sign in with existing account"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="20sp" />
+            android:textSize="36sp" />
 
         <include layout="@layout/form_existing_account" />
 
     </LinearLayout>
-</FrameLayout>
+</LinearLayout>

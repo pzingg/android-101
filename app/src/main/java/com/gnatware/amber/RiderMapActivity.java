@@ -183,6 +183,20 @@ public class RiderMapActivity extends AppCompatActivity implements
         updateRiderLocation(null);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 1) {
+            if (resultCode >= RESULT_OK) {
+                    showSnack("Thanks for signing in!");
+                    postRequest();
+            } else if (resultCode == RESULT_CANCELED) {
+                showSnack("Your request was not posted");
+            } else {
+                Log.d(LOG_TAG, "Unknown resultCode from sign in: " + String.valueOf(resultCode));
+            }
+        }
+    }
+
     // ViewTreeObserver.OnGlobalLayoutListener method
     @Override
     public void onGlobalLayout() {
@@ -357,10 +371,10 @@ public class RiderMapActivity extends AppCompatActivity implements
             // will remove the session, and the next Parse query we run will fail with an
             // "invalid session token" exception, requiring a log out and log in.
             Log.d(LOG_TAG, "Anonymous user - require sign up");
-            askUserToSignIn();
+            askUserToSignIn(1);
         } else if (!requester.isAuthenticated()) {
             Log.d(LOG_TAG, "Unauthenticated user - require log in");
-            askUserToSignIn();
+            askUserToSignIn(1);
         } else {
             // Drivers and requesters all need to see requests
             ParseACL acl = new ParseACL();
@@ -510,7 +524,7 @@ public class RiderMapActivity extends AppCompatActivity implements
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
     }
 
-    private void askUserToSignIn() {
+    private void askUserToSignIn(final int requestCode) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.login_required_anonymous_message)
                 .setTitle(R.string.login_required_title)
@@ -518,7 +532,8 @@ public class RiderMapActivity extends AppCompatActivity implements
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked OK button
                         Log.d(LOG_TAG, "User clicked OK to sign in");
-                        AmberApplication.startSignInActivity(RiderMapActivity.this);
+                        AmberApplication.startSignInActivityForResult(
+                                RiderMapActivity.this, requestCode);
                     }
                 })
                 .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {

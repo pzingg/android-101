@@ -73,7 +73,6 @@ public class CreateAccountFragment extends LoginFragmentBase {
             mMinPasswordLength = mParseLoginConfig.getParseSignupMinPasswordLength();
         }
 
-
         // Inflate the layout for this fragment
         mLayout = inflater.inflate(R.layout.fragment_create_account, container, false);
 
