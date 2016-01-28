@@ -44,7 +44,7 @@ public class DriverMapActivity extends AppCompatActivity implements
 
     private GoogleMap mMap;
 
-    private Boolean mLayoutComplete;
+    private boolean mLayoutComplete;
     private String mRequestId;
     private String mRequesterId;
     private LatLng mPickupLocation;
@@ -252,7 +252,7 @@ public class DriverMapActivity extends AppCompatActivity implements
                         @Override
                         public void done(ParseException e2) {
                             String message = null;
-                            Boolean accepted = false;
+                            boolean accepted = false;
                             if (e2 != null) {
                                 message = "Unable to update request " +
                                         mRequestId + ": " + e2.getMessage();

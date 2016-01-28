@@ -39,7 +39,6 @@ public class SignInFragment extends LoginFragmentBase {
 
     private static final String LOG_TAG = "SignInFragment";
 
-    private View mViwEmailLogin;
     private EditText mEdtEmailAddress;
     private Button mBtnCancelSignIn;
     private Button mBtnNext;
@@ -71,7 +70,6 @@ public class SignInFragment extends LoginFragmentBase {
         mParseLoginConfig = ParseLoginConfig.fromBundle(getArguments(), getActivity());
         mLayout = inflater.inflate(R.layout.fragment_sign_in, container, false);
 
-        mViwEmailLogin = mLayout.findViewById(R.id.emailSignInForm);
         mEdtEmailAddress = (EditText) mLayout.findViewById(R.id.edtEmailAddress);
         mBtnForgotPassword = (Button) mLayout.findViewById(R.id.parse_login_help);
         mBtnCancelSignIn = (Button) mLayout.findViewById(R.id.btnCancelSignIn);
@@ -91,10 +89,12 @@ public class SignInFragment extends LoginFragmentBase {
         return mLayout;
     }
 
+    // LoginFragmentBase method
+    @Override
+    protected String getLogTag() { return LOG_TAG; }
+
     // Private methods
     private void setUpEmailSignIn() {
-        mViwEmailLogin.setVisibility(View.VISIBLE);
-
         mEdtEmailAddress.setHint(R.string.com_parse_ui_email_input_hint);
         mEdtEmailAddress.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
 

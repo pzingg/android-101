@@ -23,9 +23,6 @@ package com.gnatware.amber;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -44,9 +41,9 @@ import com.parse.ui.ParseOnLoadingListener;
 /**
  * Fragment for the login help screen for resetting the user's password.
  */
-public class ParseLoginHelpFragment extends Fragment implements OnClickListener {
+public class LoginHelpFragment extends LoginFragmentBase implements OnClickListener {
 
-  private static final String LOG_TAG = "ParseLoginHelpFragment";
+  private static final String LOG_TAG = "LoginHelpFragment";
 
   private ParseLoginConfig config;
 
@@ -60,8 +57,8 @@ public class ParseLoginHelpFragment extends Fragment implements OnClickListener 
   private Button submitButton;
   private boolean emailSent = false;
 
-  public static ParseLoginHelpFragment newInstance(Bundle configOptions) {
-    ParseLoginHelpFragment loginHelpFragment = new ParseLoginHelpFragment();
+  public static LoginHelpFragment newInstance(Bundle configOptions) {
+    LoginHelpFragment loginHelpFragment = new LoginHelpFragment();
     loginHelpFragment.setArguments(configOptions);
     return loginHelpFragment;
   }
@@ -142,34 +139,7 @@ public class ParseLoginHelpFragment extends Fragment implements OnClickListener 
     }
   }
 
-  // Private methods from ParseLoginFragmentBase
-  private void showSnack(CharSequence message) {
-    Snackbar snackbar = Snackbar.make(mLayout, message, Snackbar.LENGTH_LONG);
-    snackbar.show();
-  }
-
-  private void showSnack(int resId) {
-    showSnack(getString(resId));
-  }
-
-  private void loadingStart() {
-    loadingStart(true);
-  }
-
-  private void loadingStart(boolean showSpinner) {
-    if (mLoadingListener != null) {
-      mLoadingListener.onLoadingStart(showSpinner);
-    }
-  }
-
-  private void loadingFinish() {
-    if (mLoadingListener != null) {
-      mLoadingListener.onLoadingFinish();
-    }
-  }
-
-  private boolean isActivityDestroyed() {
-    FragmentActivity activity = getActivity();
-    return activity == null || activity.isDestroyed();
-  }
+  // LoginFragmentBase method
+  @Override
+  protected String getLogTag() { return LOG_TAG; }
 }

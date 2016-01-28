@@ -122,8 +122,8 @@ public class MainActivity extends AppCompatActivity {
         ParseUser user = ParseUser.getCurrentUser();
         String userId = (user != null) ? user.getObjectId() : null;
         String sessionId = (user != null) ? user.getSessionToken() : null;
-        Boolean authenticated = (user != null && user.isAuthenticated());
-        Boolean anonymous = (user != null && ParseAnonymousUtils.isLinked(user));
+        boolean authenticated = (user != null && user.isAuthenticated());
+        boolean anonymous = (user != null && ParseAnonymousUtils.isLinked(user));
         String name = (!anonymous && user != null) ? user.getString("name") : null;
         if (name == null) {
             name = "Guest";
@@ -135,8 +135,8 @@ public class MainActivity extends AppCompatActivity {
         ParseUser user = ParseUser.getCurrentUser();
         String userId = (user != null) ? user.getObjectId() : null;
         String sessionId = (user != null) ? user.getSessionToken() : null;
-        Boolean authenticated = (user != null && user.isAuthenticated());
-        Boolean anonymous = (user != null && ParseAnonymousUtils.isLinked(user));
+        boolean authenticated = (user != null && user.isAuthenticated());
+        boolean anonymous = (user != null && ParseAnonymousUtils.isLinked(user));
 
         if (anonymous) {
             if (sessionId == null) {

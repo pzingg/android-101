@@ -20,9 +20,7 @@ import com.parse.ui.ParseOnLoadingListener;
  * Use the {@link CreateAccountFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class LoginFragmentBase extends Fragment {
-
-    public static final String LOG_TAG = "LoginFragmentBase";
+public abstract class LoginFragmentBase extends Fragment {
 
     protected ParseLoginConfig mParseLoginConfig;
 
@@ -34,7 +32,7 @@ public class LoginFragmentBase extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        Log.d(LOG_TAG, "onAttach");
+        Log.d(getLogTag(), "onAttach");
 
         if (context instanceof LoginFragmentListener) {
             mLoginFragmentListener = (LoginFragmentListener) context;
@@ -53,7 +51,7 @@ public class LoginFragmentBase extends Fragment {
     @Override
     public void onDetach() {
         super.onDetach();
-        Log.d(LOG_TAG, "onDetach");
+        Log.d(getLogTag(), "onDetach");
 
         mLoginFragmentListener = null;
         mLoadingListener = null;
@@ -88,4 +86,7 @@ public class LoginFragmentBase extends Fragment {
         FragmentActivity activity = getActivity();
         return activity == null || activity.isDestroyed();
     }
+
+    // Subclasses return their LOG_TAG with this method
+    protected abstract String getLogTag();
 }

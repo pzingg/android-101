@@ -108,7 +108,7 @@ public class RequestStatusService extends IntentService {
     }
 
     private void performQueryAndSendResult(ParseQuery<ParseObject> query,
-                                           Boolean notFoundIsError, String action) {
+                                           boolean notFoundIsError, String action) {
         String error = null;
         String requestId = null;
         String requesterId = null;

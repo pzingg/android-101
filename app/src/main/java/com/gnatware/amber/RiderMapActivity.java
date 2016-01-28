@@ -514,7 +514,7 @@ public class RiderMapActivity extends AppCompatActivity implements
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.login_required_anonymous_message)
                 .setTitle(R.string.login_required_title)
-                .setPositiveButton(R.string.com_parse_ui_create_account_button_label, new DialogInterface.OnClickListener() {
+                .setPositiveButton("Sign in", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // User clicked OK button
                         Log.d(LOG_TAG, "User clicked OK to sign in");

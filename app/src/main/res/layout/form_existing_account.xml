@@ -1,10 +1,10 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/existingAccountForm"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:id="@+id/parse_login"
-    android:visibility="gone">
+    android:gravity="center">
 
     <TextView
         android:id="@+id/txtEmailAddress"
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content" />
 
     <EditText
-        android:id="@+id/editPassword"
+        android:id="@+id/edtPassword"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         style="@style/ParseLoginUI.EditText"
@@ -34,14 +34,14 @@
             android:id="@+id/btnCancel"
             style="@style/ParseLoginUI.Button"
             android:layout_weight="0.5"
-            android:text="@string/com_parse_ui_parse_login_button_label" />
+            android:text="Cancel" />
 
         <Button
             android:id="@+id/btnSignIn"
             style="@style/ParseLoginUI.Button"
             android:layout_marginLeft="@dimen/com_parse_ui_small_horizontal_spacing"
             android:layout_weight="0.5"
-            android:text="@string/com_parse_ui_parse_signup_button_label" />
+            android:text="Sign in" />
     </LinearLayout>
 
     <Button

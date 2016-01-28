@@ -2,12 +2,14 @@ package com.gnatware.amber;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.view.Window;
 
 import com.parse.ParseFacebookUtils;
 import com.parse.ui.ParseOnLoadingListener;
@@ -29,42 +31,42 @@ public class SignInActivity extends AppCompatActivity implements
     // Change this if you are modifying this code to be hosted in your own activity.
     private int mContainerViewId;
 
-    private CoordinatorLayout mLayout;
     private ProgressDialog mProgressDialog;
     private Bundle mConfigOptions;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Log.d(LOG_TAG, "onCreate");
 
-        // Set a global layout listener which will be called when the layout pass is completed and the view is drawn
-        mLayout = (CoordinatorLayout) getLayoutInflater().inflate(R.layout.activity_sign_in, null);
-        if (mLayout != null) {
-            setContentView(mLayout);
-            mContainerViewId = mLayout.getId();
+        // These must be called before super.onCreate
+        // Force portrait, no titles, please
+        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        super.onCreate(savedInstanceState);
+
+        // Use a layout or android.R.id.content
+        // View contentView = (View) getLayoutInflater().inflate(R.layout.activity_sign_in, null);
+        View contentView = null;
+        if (contentView != null) {
+            mContainerViewId = View.generateViewId();
+            contentView.setId(mContainerViewId);
+            setContentView(contentView);
         } else {
             mContainerViewId = android.R.id.content;
         }
 
-        // Disable landscape
-        // this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        // Log.d(LOG_TAG, "onCreate - requested portrait");
-
-        // this.requestWindowFeature(Window.FEATURE_NO_TITLE);
-
         mConfigOptions = getIntent().getExtras();
-        Log.d(LOG_TAG, "onCreate - got options");
 
         // Show the unified sign-in / sign-up form
         if (savedInstanceState == null) {
-            Log.d(LOG_TAG, "onCreate - new instance state");
-
+            Log.d(LOG_TAG, "onCreate, new instance - load SignInFragment");
             FragmentManager fragmentManager = getSupportFragmentManager();
             FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
             SignInFragment fragment = SignInFragment.newInstance(mConfigOptions);
             fragmentTransaction.add(mContainerViewId, fragment);
             fragmentTransaction.commit();
+        } else {
+            Log.d(LOG_TAG, "onCreate, existing instance");
         }
     }
 
@@ -94,58 +96,74 @@ public class SignInActivity extends AppCompatActivity implements
         ParseFacebookUtils.onActivityResult(requestCode, resultCode, data);
     }
 
+    /**
+     * Called when the user clicked the Next button on the main sign in fragment, and
+     * the email address was associated with an existing account.
+     */
     @Override
     public void onPushExistingAccount(String emailAddress) {
+        Log.d(LOG_TAG, "onPushExistingAccount");
 
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        ExistingAccountFragment fragment = ExistingAccountFragment.newInstance(mConfigOptions, emailAddress);
-        transaction.replace(mContainerViewId, fragment);
-        transaction.addToBackStack(null);
-        transaction.commit();
-    }
-
-    @Override
-    public void onPushCreateAccount(String emailAddress) {
-
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        CreateAccountFragment fragment = CreateAccountFragment.newInstance(mConfigOptions, emailAddress);
+        ExistingAccountFragment fragment = ExistingAccountFragment.newInstance(
+                mConfigOptions, emailAddress);
         transaction.replace(mContainerViewId, fragment);
         transaction.addToBackStack(null);
         transaction.commit();
     }
 
     /**
-     * Called when the user clicked any of the back buttons on the
-     * create account or existing account fragments.
+     * Called when the user clicked the Next button on the main sign in fragment, and
+     * the email address was not associated with an existing account.
+     */
+    @Override
+    public void onPushCreateAccount(String emailAddress) {
+        Log.d(LOG_TAG, "onPushCreateAccount");
+
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        CreateAccountFragment fragment = CreateAccountFragment.newInstance(
+                mConfigOptions, emailAddress);
+        transaction.replace(mContainerViewId, fragment);
+        transaction.addToBackStack(null);
+        transaction.commit();
+    }
+
+    /**
+     * Called when the user clicked any of the back buttons on either the create account or
+     * the existing account fragment.
      */
     @Override
     public void onBackClicked() {
+        Log.d(LOG_TAG, "onBackClicked");
+
         // Display the login form, which is the previous item onto the stack
         getSupportFragmentManager().popBackStackImmediate();
     }
 
     /**
-     * Called when the user clicked any of the back buttons on the
-     * main sign in fragment.
+     * Called when the user clicked any of the back buttons on the main sign in fragment.
      */
     @Override
     public void onCancelClicked() {
+        Log.d(LOG_TAG, "onCancelClicked");
+
         // Display the calling activity, which is the previous item onto the stack
         setResult(RESULT_CANCELED);
         finish();
     }
 
     /**
-     * Called when the user clicked the log in button on the login form.
+     * Called when the user clicked the "forgot password" button on the main sign in fragment.
      */
     @Override
     public void onLoginHelpClicked() {
+        Log.d(LOG_TAG, "onLoginHelpClicked");
 
         // Show the login help form for resetting the user's password.
         // Keep the transaction on the back stack so that if the user clicks
         // the back button, they are brought back to the login form.
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(mContainerViewId, ParseLoginHelpFragment.newInstance(mConfigOptions));
+        transaction.replace(mContainerViewId, LoginHelpFragment.newInstance(mConfigOptions));
         transaction.addToBackStack(null);
         transaction.commit();
     }
@@ -155,30 +173,33 @@ public class SignInActivity extends AppCompatActivity implements
      */
     @Override
     public void onLoginHelpSuccess() {
+        Log.d(LOG_TAG, "onLoginHelpSuccess");
+
         // Display the login form, which is the previous item onto the stack
         getSupportFragmentManager().popBackStackImmediate();
     }
 
     /**
-     * Called when the user successfully logs in or signs up.
+     * Called when the user successfully logs in to an existing account.
      */
     @Override
     public void onLoginSuccess() {
+        Log.d(LOG_TAG, "onLoginSuccess");
 
-        // This default implementation returns to the parent activity with
-        // RESULT_OK.
-        // You can change this implementation if you want a different behavior.
+        // This default implementation returns to the parent activity with RESULT_OK.
         // TODO: Add intent with exsiting account info, or use RESULT_FIRST_USER+nnn
         setResult(RESULT_OK);
         finish();
     }
 
+    /**
+     * Called when the user successfully creates a new account.
+     */
     @Override
     public void onCreateAccountSuccess() {
+        Log.d(LOG_TAG, "onCreateAccountSuccess");
 
-        // This default implementation returns to the parent activity with
-        // RESULT_OK.
-        // You can change this implementation if you want a different behavior.
+        // This default implementation returns to the parent activity with RESULT_OK.
         // TODO: Add intent with new account info, or use RESULT_FIRST_USER+nnn
         setResult(RESULT_OK);
         finish();

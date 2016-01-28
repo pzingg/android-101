@@ -73,7 +73,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
             itemView.setOnClickListener(this);
         }
 
-        public Boolean hasAcceptedRequest() {
+        public boolean hasAcceptedRequest() {
             return mViewType == VIEW_TYPE_ACCEPTED_REQUEST;
         }
 

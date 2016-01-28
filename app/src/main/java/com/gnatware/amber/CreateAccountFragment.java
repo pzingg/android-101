@@ -89,6 +89,10 @@ public class CreateAccountFragment extends LoginFragmentBase {
         return mLayout;
     }
 
+    // LoginFragmentBase method
+    @Override
+    protected String getLogTag() { return LOG_TAG; }
+
     // Private methods
     private void setUpView() {
         mTxtEmailAddress.setText(mEmailAddress);

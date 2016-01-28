@@ -114,12 +114,14 @@ Settings > Applications > Manage Applications > [Find and Uninstall your App]
 Restarting the emulator from the Android SDK and AVD Manager and selecting the 
 option Wipe User Data.
 
-I/AppCompatDelegate: The Activity's LayoutInflater already has a Factory installed so we can not install AppCompat's.
+DEVICE SHELL COMMAND: pm uninstall com.gnatware.amber
+DEVICE SHELL COMMAND: pm install -r "/data/local/tmp/com.gnatware.amber"
 
-D/SignInActivity: onCreate
-W/ActivityManager:   Force finishing activity 1 com.gnatware.amber/.SignInActivity
-W/DropBoxManagerService: Dropping: data_app_crash (2091 > 0 bytes)
-W/ActivityManager:   Force finishing activity 2 com.gnatware.amber/.RiderMapActivity
-W/ActivityManager: Activity pause timeout for ActivityRecord{18a878f3 u0 com.gnatware.amber/.SignInActivity t72 f}
-I/Process: Sending signal. PID: 17293 SIG: 9
-I/ActivityManager: Process com.gnatware.amber (pid 17293) has died
+
+Runtime Bugs
+------------
+In RiderMapActivity:
+I/AppCompatDelegate: The Activity's LayoutInflater already has a Factory installed so we can not install AppCompat's
+
+Fragments being loaded on top of each other:
+http://stackoverflow.com/questions/14810348/android-fragment-replace-doesnt-replace-content-puts-it-on-top

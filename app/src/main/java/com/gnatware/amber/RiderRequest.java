@@ -8,12 +8,12 @@ import com.parse.ParseGeoPoint;
 public class RiderRequest {
 
     public String objectId;
-    public Boolean accepted;
+    public boolean accepted;
     public String requesterId;
     public ParseGeoPoint pickupLocation;
     public ParseGeoPoint driverLocation;
 
-    public RiderRequest(String objectId, Boolean accepted, String requesterId,
+    public RiderRequest(String objectId, boolean accepted, String requesterId,
                         ParseGeoPoint pickupLocation, ParseGeoPoint driverLocation) {
         this.objectId = objectId;
         this.accepted = accepted;
