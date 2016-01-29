@@ -22,7 +22,7 @@ import com.parse.ParseUser;
  */
 public class RequestStatusService extends IntentService {
 
-    private static final String TAG = "RequestStatusService";
+    private static final String LOG_TAG = "RequestStatusService";
 
     public static final String ACTION_GET_REQUEST_STATUS = "com.gnatware.amber.action.GET_REQUEST_STATUS";
     public static final String ACTION_GET_RIDER_REQUEST_STATUS = "com.gnatware.amber.action.GET_RIDER_REQUEST_STATUS";
@@ -38,7 +38,7 @@ public class RequestStatusService extends IntentService {
     private static final String EXTRA_RECEIVER = "com.gnatware.amber.extra.RECEIVER";
 
     public RequestStatusService() {
-        super(TAG);
+        super(LOG_TAG);
     }
 
     /**
@@ -64,10 +64,10 @@ public class RequestStatusService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent == null) {
-            Log.d(TAG, "onHandleIntent: null intent");
+            Log.d(LOG_TAG, "onHandleIntent: null intent");
         } else {
             final String action = intent.getAction();
-            Log.d(TAG, "onHandleIntent " + action);
+            Log.d(LOG_TAG, "onHandleIntent " + action);
             if (ACTION_GET_REQUEST_STATUS.equals(action)) {
                 final String requestId = intent.getStringExtra(EXTRA_REQUEST_ID);
                 getRequestStatus(requestId);
@@ -80,9 +80,7 @@ public class RequestStatusService extends IntentService {
 
     // Private methods
 
-    // Handle an action  in the provided background thread with the provided parameters.
     private void getRequestStatus(String requestId) {
-        Log.d(TAG, "getRequestStatus for request " + requestId);
 
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Request");
         query.whereEqualTo("objectId", requestId);
@@ -93,9 +91,8 @@ public class RequestStatusService extends IntentService {
     }
 
     private void getRiderRequestStatus(String requesterId) {
-        Log.d(TAG, "getRiderRequestStatus for requester " + requesterId);
 
-        // Nested query - synchronous request
+        // Nested query
         ParseQuery<ParseUser> userQuery = ParseUser.getQuery();
         userQuery.whereEqualTo("objectId", requesterId);
 
@@ -115,13 +112,14 @@ public class RequestStatusService extends IntentService {
         String driverId = null;
         ParseGeoPoint location = null;
 
+        // Synchronous requests OK on this service thread
         ParseObject request = null;
         try {
             request = query.getFirst();
         } catch (ParseException e) {
             if (ParseException.OBJECT_NOT_FOUND != e.getCode()) {
                 error = "Query error: " + e.getMessage();
-                Log.d(TAG, error);
+                Log.d(LOG_TAG, error);
             }
         }
 
@@ -143,12 +141,12 @@ public class RequestStatusService extends IntentService {
                 location = driver.getParseGeoPoint("lastLocation");
                 if (location == null) {
                     // Not flagged as an error ?
-                    Log.d(TAG, "Cannot get location for driver " + driver.getObjectId());
+                    Log.d(LOG_TAG, "Cannot get location for driver " + driver.getObjectId());
                 }
             }
         }
 
-        Log.d(TAG, "Query result: request=" + requestId + ", requester=" + requesterId + ", driver=" + driverId);
+        Log.d(LOG_TAG, "Query result: request=" + requestId + ", requester=" + requesterId + ", driver=" + driverId);
         sendResultForAction(action,
                 error, requestId, requesterId, driverId, location);
     }
@@ -183,7 +181,6 @@ public class RequestStatusService extends IntentService {
             }
         }
         intent.putExtra("flags", flags);
-        Log.d(TAG, "sendResultforAction: broadcasting intent, flags=" + String.valueOf(flags));
 
         // Fire the broadcast with intent packaged
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);

@@ -31,7 +31,7 @@ import java.util.List;
 // Adapter for RecyclerView
 public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHolder> {
 
-    public static final String TAG = "RequestsAdapter";
+    public static final String LOG_TAG = "RequestsAdapter";
 
     // Two different tile layouts depending on whether request has been accepted or not.
     public static final int VIEW_TYPE_AVAILABLE_REQUEST = 1;
@@ -48,7 +48,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
     public static class ViewHolder extends RecyclerView.ViewHolder
             implements View.OnClickListener {
 
-        public static final String TAG = "RAViewHolder";
+        public static final String LOG_TAG = "RAViewHolder";
 
         private RequestsAdapter mAdapter;
 
@@ -88,7 +88,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
             if (!request.accepted) {
                 if (mTxtPickupDistance == null) {
-                    Log.e(TAG, "Wrong view type for available request?");
+                    Log.e(LOG_TAG, "Wrong view type for available request?");
                 } else {
                     double distance = request.getPickupDistance();
                     String strDistance = new DecimalFormat("0.# miles").format(distance);
@@ -99,13 +99,13 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
         @Override
         public void onClick(View view) {
-            Log.d(TAG, "onClick for " + mRequest.objectId);
+            Log.d(LOG_TAG, "onClick for " + mRequest.objectId);
 
             if (hasAcceptedRequest()) {
-                Log.d(TAG, "Canceling request");
+                Log.d(LOG_TAG, "Canceling request");
                 mAdapter.cancelRequest(mRequest.objectId);
             } else {
-                Log.d(TAG, "Starting DriverMapActivity");
+                Log.d(LOG_TAG, "Starting DriverMapActivity");
 
                 // Do something with the rider request
                 Context context = view.getContext();
@@ -159,7 +159,7 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
 
         // Get request data from cached array and bind it to the ViewHolder
         RiderRequest request = mRequests.get(position);
-        Log.d(TAG, "onBindViewHolder, request[" + Integer.toString(position) + "]: " +
+        Log.d(LOG_TAG, "onBindViewHolder, request[" + Integer.toString(position) + "]: " +
                 request.toString());
         viewHolder.bind(request);
     }
@@ -189,9 +189,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
             @Override
             public void done(ParseObject request, ParseException e1) {
                 if (e1 != null) {
-                    Log.d(TAG, e1.getMessage());
+                    Log.e(LOG_TAG, e1.getMessage());
                 } else if (request != null) {
-                    Log.d(TAG, "Found accepted request");
                     mRequests.clear();
                     mRequests.add(new RiderRequest(
                             request.getObjectId(),
@@ -214,9 +213,8 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
                         @Override
                         public void done(List<ParseObject> requests, ParseException e2) {
                             if (e2 != null) {
-                                Log.d(TAG, e2.getMessage());
+                                Log.e(LOG_TAG, e2.getMessage());
                             } else {
-                                Log.d(TAG, "Found " + requests.size() + " nearby requests");
                                 mRequests.clear();
                                 for (ParseObject request : requests) {
                                     mRequests.add(new RiderRequest(
@@ -242,22 +240,25 @@ public class RequestsAdapter extends RecyclerView.Adapter<RequestsAdapter.ViewHo
         query.getInBackground(requestId, new GetCallback<ParseObject>() {
 
             @Override
-            public void done(ParseObject request, ParseException e) {
+            public void done(ParseObject request, ParseException e1) {
                 if (request == null) {
-                    Log.d(TAG, "Could not get request " + requestId);
+                    Log.e(LOG_TAG, "Could not get request " + requestId);
                 } else {
                     Date now = new Date();
                     request.put("canceledAt", now);
                     request.put("cancellationReason", "Canceled by driver...");
-                    Log.d(TAG, "Canceling request " + requestId);
                     request.saveInBackground(new SaveCallback() {
 
                         @Override
-                        public void done(ParseException e) {
-                            Log.d(TAG, "Request " + requestId + " canceled by driver");
-
-                            // TODO: Notify rider (push notification?)
-                            mActivity.showSnack("Request canceled");
+                        public void done(ParseException e2) {
+                            if (e2 != null) {
+                                Log.e(LOG_TAG, "Could not cancel request " + requestId + ": " + e2.toString());
+                                mActivity.showSnack("Error canceling request");
+                            } else {
+                                Log.d(LOG_TAG, "Request " + requestId + " canceled by driver");
+                                // TODO: Notify rider (push notification?)
+                                mActivity.showSnack("Request canceled");
+                            }
                             updateRequests();
                         }
                     });

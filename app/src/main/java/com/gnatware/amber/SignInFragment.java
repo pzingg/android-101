@@ -1,5 +1,6 @@
 package com.gnatware.amber;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
@@ -22,9 +23,10 @@ import com.parse.ParseTwitterUtils;
 import com.parse.ParseUser;
 import com.parse.SaveCallback;
 import com.parse.twitter.Twitter;
-import com.parse.ui.ParseLoginConfig;
 
 import org.json.JSONObject;
+
+import java.util.Collection;
 
 
 /**
@@ -35,7 +37,7 @@ import org.json.JSONObject;
  * Use the {@link SignInFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class SignInFragment extends LoginFragmentBase {
+public class SignInFragment extends LoginFragmentBase implements View.OnClickListener {
 
     private static final String LOG_TAG = "SignInFragment";
 
@@ -65,10 +67,9 @@ public class SignInFragment extends LoginFragmentBase {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.d(LOG_TAG, "onCreateView");
 
-        mParseLoginConfig = ParseLoginConfig.fromBundle(getArguments(), getActivity());
-        mLayout = inflater.inflate(R.layout.fragment_sign_in, container, false);
+        // Inflate the layout for this fragment and create ParseLoginConfig object
+        initConfigAndView(inflater, container, R.layout.fragment_sign_in);
 
         mEdtEmailAddress = (EditText) mLayout.findViewById(R.id.edtEmailAddress);
         mBtnForgotPassword = (Button) mLayout.findViewById(R.id.parse_login_help);
@@ -93,252 +94,52 @@ public class SignInFragment extends LoginFragmentBase {
     @Override
     protected String getLogTag() { return LOG_TAG; }
 
-    // Private methods
-    private void setUpEmailSignIn() {
-        mEdtEmailAddress.setHint(R.string.com_parse_ui_email_input_hint);
-        mEdtEmailAddress.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+    // View.OnClickListener method (next button clicked)
+    @Override
+    public void onClick(View v) {
+        final String emailAddress = mEdtEmailAddress.getText().toString();
 
-        mBtnNext.setOnClickListener(new View.OnClickListener() {
+        if (emailAddress.length() == 0) {
+            showSnack(R.string.com_parse_ui_no_email_toast);
+        } else {
+            // TODO: Validate email with regex?
+            // TODO: Strip spaces?
+            // TODO: Lowercase?
+            ParseQuery<ParseUser> query = ParseUser.getQuery();
+            query.whereEqualTo("email", emailAddress);
+            loadingStart();
 
-            @Override
-            public void onClick(View v) {
-                final String emailAddress = mEdtEmailAddress.getText().toString();
-
-                if (emailAddress.length() == 0) {
-                    showSnack(R.string.com_parse_ui_no_email_toast);
-                } else {
-                    // TODO: Validate email with regex?
-                    // TODO: Strip spaces?
-                    // TODO: Lowercase?
-                    ParseQuery<ParseUser> query = ParseUser.getQuery();
-                    query.whereEqualTo("email", emailAddress);
-                    loadingStart();
-
-                    query.getFirstInBackground(new GetCallback<ParseUser>() {
-
-                        @Override
-                        public void done(ParseUser user, ParseException e) {
-                            if (isActivityDestroyed()) {
-                                return;
-                            }
-
-                            loadingFinish();
-                            if (e == null) {
-
-                                // Found user with that email address, so send to existing account
-                                Log.d(LOG_TAG, "onPushExistingAccount with " + emailAddress);
-                                mLoginFragmentListener.onPushExistingAccount(emailAddress);
-                            } else {
-                                if (e.getCode() == ParseException.OBJECT_NOT_FOUND) {
-
-                                    // Email not found, so send to create account
-                                    Log.d(LOG_TAG, "onPushCreateAccount with " + emailAddress);
-                                    mLoginFragmentListener.onPushCreateAccount(emailAddress);
-                                } else {
-                                    Log.d(LOG_TAG, "Error looking up " + emailAddress + ": " +
-                                            e.getMessage());
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-        });
-
-        mBtnCancelSignIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(LOG_TAG, "User canceled sign-in");
-                mLoginFragmentListener.onCancelClicked();
-            }
-        });
-
-        if (mParseLoginConfig.getParseLoginHelpText() != null) {
-            mBtnForgotPassword.setText(mParseLoginConfig.getParseLoginHelpText());
-        }
-
-        mBtnForgotPassword.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(LOG_TAG, "onLoginHelpClicked");
-                mLoginFragmentListener.onLoginHelpClicked();
-            }
-        });
-    }
-
-    private void setUpFacebookLogin() {
-        mBtnFacebookLogin.setVisibility(View.VISIBLE);
-
-        if (mParseLoginConfig.getFacebookLoginButtonText() != null) {
-            mBtnFacebookLogin.setText(mParseLoginConfig.getFacebookLoginButtonText());
-        }
-
-        mBtnFacebookLogin.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v) {
-                loadingStart(false); // Facebook login pop-up already has a spinner
-
-                // Package-private method - we assume no publish permissions needed
-                // if (mParseLoginConfig.isFacebookLoginNeedPublishPermissions()) { ... }
-                ParseFacebookUtils.logInWithReadPermissionsInBackground(getActivity(),
-                        mParseLoginConfig.getFacebookLoginPermissions(), new LogInCallback() {
-
-                            @Override
-                            public void done(ParseUser user, ParseException e) {
-                                if (isActivityDestroyed()) {
-                                    return;
-                                }
-
-                                if (user == null) {
-                                    loadingFinish();
-                                    if (e != null) {
-                                        showSnack(R.string.com_parse_ui_facebook_login_failed_toast);
-                                        Log.d(LOG_TAG, getString(R.string.com_parse_ui_login_warning_facebook_login_failed) +
-                                                e.toString());
-                                    } else {
-                                        Log.d(LOG_TAG, "Facebook login canceled?");
-                                    }
-                                } else {
-                                    if (user.isNew()) {
-                                        saveFacebookNameForNewUser(user);
-                                    } else {
-                                        Log.d(LOG_TAG, "Existing account " + user.getObjectId() + " logged in via Facebook");
-                                        loginSuccess();
-                                    }
-                                }
-                            }
-                        });
-
-            }
-        });
-    }
-
-    private void saveFacebookNameForNewUser(ParseUser user) {
-        final String userId = user.getObjectId();
-
-        GraphRequest.newMeRequest(AccessToken.getCurrentAccessToken(),
-                new GraphRequest.GraphJSONObjectCallback() {
-
-                    @Override
-                    public void onCompleted(JSONObject fbUser,
-                                            GraphResponse response) {
-                  /*
-                    If we were able to successfully retrieve the Facebook
-                    user's name, let's set it on the fullName field.
-                  */
-                        ParseUser parseUser = ParseUser.getCurrentUser();
-                        if (parseUser != null) {
-                            final String parseUserId = parseUser.getObjectId();
-                            if (fbUser != null
-                                    && fbUser.optString("name").length() > 0) {
-                                parseUser.put(SignInActivity.USER_OBJECT_NAME_FIELD,
-                                        fbUser.optString("name"));
-                                parseUser.saveInBackground(new SaveCallback() {
-
-                                    @Override
-                                    public void done(ParseException e) {
-                                        if (e != null) {
-                                            Log.d(LOG_TAG,
-                                                    getString(
-                                                            R.string.com_parse_ui_login_warning_facebook_login_user_update_failed) +
-                                                            e.toString());
-                                        } else {
-                                            Log.d(LOG_TAG, "New account " + parseUserId + " logged in via Facebook");
-                                        }
-                                        loginSuccess();
-                                    }
-                                });
-                            } else {
-                                Log.d(LOG_TAG, "New account " + parseUserId + " logged in via Facebook, but could not retrieve name");
-                            }
-                        } else {
-                            Log.d(LOG_TAG, "New account " + userId + " logged in via Facebook, but could not get current user");
-                        }
-                        loginSuccess();
-                    }
-                }
-        ).executeAsync();
-    }
-
-    private void setUpTwitterLogin() {
-        mBtnTwitterLogin.setVisibility(View.VISIBLE);
-
-        if (mParseLoginConfig.getTwitterLoginButtonText() != null) {
-            mBtnTwitterLogin.setText(mParseLoginConfig.getTwitterLoginButtonText());
-        }
-
-        mBtnTwitterLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                loadingStart(false); // Twitter login pop-up already has a spinner
-                ParseTwitterUtils.logIn(getActivity(), new LogInCallback() {
-
-                    @Override
-                    public void done(ParseUser user, ParseException e) {
-                        if (isActivityDestroyed()) {
-                            return;
-                        }
-
-                        if (user == null) {
-                            loadingFinish();
-                            if (e != null) {
-                                showSnack(R.string.com_parse_ui_twitter_login_failed_toast);
-                                Log.d(LOG_TAG, getString(R.string.com_parse_ui_login_warning_twitter_login_failed) +
-                                        e.toString());
-                            } else {
-                                Log.d(LOG_TAG, "Twitter login canceled?");
-                            }
-                        } else {
-                            if (user.isNew()) {
-                                saveTwitterNameForNewUser(user);
-                            } else {
-                                Log.d(LOG_TAG, "Existing account " + user.getObjectId() + " logged in via Twitter");
-                                loginSuccess();
-                            }
-                        }
-                    }
-                });
-            }
-        });
-    }
-
-    private void saveTwitterNameForNewUser(ParseUser user) {
-        final String userId = user.getObjectId();
-
-        Twitter twitterUser = ParseTwitterUtils.getTwitter();
-        if (twitterUser != null
-                && twitterUser.getScreenName().length() > 0) {
-                /*
-                  To keep this example simple, we put the users' Twitter screen name
-                  into the name field of the Parse user object. If you want the user's
-                  real name instead, you can implement additional calls to the
-                  Twitter API to fetch it.
-                */
-            user.put(SignInActivity.USER_OBJECT_NAME_FIELD, twitterUser.getScreenName());
-            user.saveInBackground(new SaveCallback() {
+            query.getFirstInBackground(new GetCallback<ParseUser>() {
 
                 @Override
-                public void done(ParseException e) {
-                    if (e != null) {
-                        Log.d(LOG_TAG,
-                            getString(R.string.com_parse_ui_login_warning_twitter_login_user_update_failed) +
-                                    e.toString());
+                public void done(ParseUser user, ParseException e) {
+                    if (isActivityDestroyed()) {
+                        return;
                     }
-                    Log.d(LOG_TAG, "New account " + userId + " created via Twitter");
-                    loginSuccess();
+
+                    loadingFinish();
+                    if (e == null) {
+
+                        // Found user with that email address, so send to existing account
+                        Log.d(LOG_TAG, "onPushExistingAccount with " + emailAddress);
+                        mLoginFragmentListener.onPushExistingAccount(emailAddress);
+                    } else {
+                        if (e.getCode() == ParseException.OBJECT_NOT_FOUND) {
+
+                            // Email not found, so send to create account
+                            Log.d(LOG_TAG, "onPushCreateAccount with " + emailAddress);
+                            mLoginFragmentListener.onPushCreateAccount(emailAddress);
+                        } else {
+                            Log.d(LOG_TAG, "Error looking up " + emailAddress + ": " +
+                                    e.getMessage());
+                        }
+                    }
                 }
             });
-        } else {
-            Log.d(LOG_TAG, "New account " + userId + " created via Twitter, but could not retrieve name");
-            loginSuccess();
         }
     }
 
-    private void loginSuccess() {
-        mLoginFragmentListener.onLoginSuccess();
-    }
-
+    // Private methods
     private boolean allowEmailSignIn() {
         return mParseLoginConfig.isParseLoginEnabled();
     }
@@ -349,5 +150,219 @@ public class SignInFragment extends LoginFragmentBase {
 
     private boolean allowTwitterLogin() {
         return mParseLoginConfig.isTwitterLoginEnabled();
+    }
+
+    private void setUpEmailSignIn() {
+        mEdtEmailAddress.setHint(R.string.com_parse_ui_email_input_hint);
+        mEdtEmailAddress.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+
+        mBtnCancelSignIn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(LOG_TAG, "User canceled sign-in");
+                mLoginFragmentListener.onCancelClicked();
+            }
+        });
+
+        mBtnNext.setOnClickListener(this);
+
+        if (mParseLoginConfig.getParseLoginHelpText() != null) {
+            mBtnForgotPassword.setText(mParseLoginConfig.getParseLoginHelpText());
+        }
+
+        mBtnForgotPassword.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { mLoginFragmentListener.onLoginHelpClicked(); }
+        });
+    }
+
+    private void setUpFacebookLogin() {
+        if (mParseLoginConfig.getFacebookLoginButtonText() != null) {
+            mBtnFacebookLogin.setText(mParseLoginConfig.getFacebookLoginButtonText());
+        }
+        mBtnFacebookLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) { onFacebookButtonClicked(v); }
+        });
+    }
+
+    private void setUpTwitterLogin() {
+        if (mParseLoginConfig.getTwitterLoginButtonText() != null) {
+            mBtnTwitterLogin.setText(mParseLoginConfig.getTwitterLoginButtonText());
+        }
+        mBtnTwitterLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onTwitterButtonClicked(v);
+            }
+        });
+    }
+
+    private void copyDetailsToUser(final ParseUser user, final String auth,
+                                          String name, String emailAddress) {
+
+        boolean detailsToSave = false;
+        if (name != null && name.length() > 0) {
+            user.put(SignInActivity.USER_OBJECT_NAME_FIELD, name);
+            detailsToSave = true;
+        }
+        if (emailAddress != null && emailAddress.length() > 0) {
+            user.put("email", emailAddress);
+            detailsToSave = true;
+        }
+        if (!detailsToSave) {
+            Log.e(LOG_TAG, "No " + auth + " details to save for logged in user");
+            loginSuccess(user);
+            return;
+        }
+
+        user.saveInBackground(new SaveCallback() {
+
+            @Override
+            public void done(ParseException e) {
+                if (isActivityDestroyed()) {
+                    Log.e(LOG_TAG, "Activity was destroyed while saving " + auth + " details");
+                    return;
+                }
+
+                if (e != null) {
+                    Log.e(LOG_TAG,
+                            getString(
+                                    R.string.com_parse_ui_login_warning_facebook_login_user_update_failed) +
+                                    e.toString());
+                } else {
+                    Log.d(LOG_TAG, auth + " details saved to " + user.getObjectId() + " account");
+                }
+                loginSuccess(user);
+            }
+        });
+    }
+
+    private void copyFacebookDetailsToUser(final ParseUser user) {
+
+        AccessToken token = AccessToken.getCurrentAccessToken();
+        GraphRequest.newMeRequest(token, new GraphRequest.GraphJSONObjectCallback() {
+
+            @Override
+            public void onCompleted(JSONObject fbUser, GraphResponse response) {
+                if (isActivityDestroyed()) {
+                    Log.e(LOG_TAG, "Activity was destroyed during Facebook graph request");
+                    return;
+                }
+
+                if (fbUser == null) {
+                    Log.e(LOG_TAG, "Could not fetch Facebook user information");
+                    loginSuccess(user);
+                } else {
+
+                    // If we were able to successfully retrieve the Facebook
+                    // user's name, let's set it on the fullName field.
+                    String name = fbUser.optString("name");
+                    copyDetailsToUser(user, "Facebook", name, null);
+                }
+            }
+        }).executeAsync();
+    }
+
+    private void onFacebookButtonClicked(View v) {
+
+        // Facebook login pop-up already has a spinner
+        loadingStart(false);
+
+        Activity activity = getActivity();
+        Collection<String> permissions = mParseLoginConfig.getFacebookLoginPermissions();
+
+        // isFacebookLoginNeedPublishPermissions() is a package-private method -
+        // we assume no publish permissions needed.
+        ParseFacebookUtils.logInWithReadPermissionsInBackground(activity, permissions, new LogInCallback() {
+
+            @Override
+            public void done(ParseUser user, ParseException e) {
+                if (isActivityDestroyed()) {
+                    Log.e(LOG_TAG, "Activity was destroyed during Facebook log in");
+                    return;
+                }
+
+                if (user == null) {
+                    loadingFinish();
+                    if (e != null) {
+                        showSnack(R.string.com_parse_ui_facebook_login_failed_toast);
+                        Log.d(LOG_TAG, getString(R.string.com_parse_ui_login_warning_facebook_login_failed) +
+                                e.toString());
+                    } else {
+                        Log.d(LOG_TAG, "Facebook login canceled?");
+                    }
+                } else if (user.isNew()) {
+                    final ParseUser currentUser = ParseUser.getCurrentUser();
+                    if (currentUser == null) {
+                        Log.e(LOG_TAG, "Cannot copy Facebook details - no current user");
+                        loginSuccess(user);
+                    } else {
+                        copyFacebookDetailsToUser(currentUser);
+                    }
+                } else {
+                    Log.d(LOG_TAG, "Existing account " + user.getObjectId() + " logged in via Facebook");
+                    loginSuccess(user);
+                }
+            }
+        });
+    }
+
+    private void copyTwitterDetailsToUser(final ParseUser user) {
+        Twitter twitterUser = ParseTwitterUtils.getTwitter();
+        if (twitterUser == null) {
+            Log.e(LOG_TAG, "Could not fetch Twitter user information");
+            loginSuccess(user);
+        } else {
+
+            // To keep this example simple, we put the users' Twitter screen name
+            // into the name field of the Parse user object. If you want the user's
+            // real name instead, you can implement additional calls to the
+            // Twitter API to fetch it.
+            String name = twitterUser.getScreenName();
+            copyDetailsToUser(user, "Twitter", name, null);
+        }
+    }
+
+    private void onTwitterButtonClicked(View v) {
+
+        // Twitter login pop-up already has a spinner
+        loadingStart(false);
+        ParseTwitterUtils.logIn(getActivity(), new LogInCallback() {
+
+            @Override
+            public void done(ParseUser user, ParseException e) {
+                if (isActivityDestroyed()) {
+                    Log.e(LOG_TAG, "Activity was destroyed during Twitter log in");
+                    return;
+                }
+
+                if (user == null) {
+                    loadingFinish();
+                    if (e != null) {
+                        showSnack(R.string.com_parse_ui_twitter_login_failed_toast);
+                        Log.d(LOG_TAG, getString(R.string.com_parse_ui_login_warning_twitter_login_failed) +
+                                e.toString());
+                    } else {
+                        Log.d(LOG_TAG, "Twitter login canceled?");
+                    }
+                } else if (user.isNew()) {
+                    final ParseUser currentUser = ParseUser.getCurrentUser();
+                    if (currentUser == null) {
+                        Log.e(LOG_TAG, "Cannot copy Facebook details - no current user");
+                        loginSuccess(user);
+                    } else {
+                        copyTwitterDetailsToUser(currentUser);
+                    }
+                } else {
+                    Log.d(LOG_TAG, "Existing account " + user.getObjectId() + " logged in via Twitter");
+                    loginSuccess(user);
+                }
+            }
+        });
+    }
+
+    private void loginSuccess(ParseUser user) {
+        mLoginFragmentListener.onLoginSuccess(user);
     }
 }

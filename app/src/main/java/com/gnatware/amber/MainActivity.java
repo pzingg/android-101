@@ -1,11 +1,9 @@
 package com.gnatware.amber;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -32,8 +30,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(LOG_TAG, "onCreate");
-
         initializeState();
         validateUser(null);
     }
@@ -41,8 +37,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(LOG_TAG, "onResume");
-
         ParseUser user = ParseUser.getCurrentUser();
         if (user != null) {
             String role = user.getString("role");
@@ -53,24 +47,24 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 1) { // User pressed sign in button
+        if (AmberApplication.RC_LOG_IN_BUTTON_CLICKED == requestCode) {
             if (resultCode >= RESULT_OK) {
                 showSnack("You are now signed in");
                 updateLoginStateUI();
             } else if (resultCode == RESULT_CANCELED) {
                 // Do nothing
             } else {
-                Log.d(LOG_TAG, "Unknown resultCode from sign in: " + String.valueOf(resultCode));
+                Log.e(LOG_TAG, "Unknown resultCode from log in button: " + String.valueOf(resultCode));
             }
         }
-        if (requestCode == 2) { // User accepted request to sign in
+        if (AmberApplication.RC_USER_REQUIRES_AUTHENTICATION == requestCode) {
             if (resultCode >= RESULT_OK) {
                 showSnack("Welcome back");
                 updateLoginStateUI();
             } else if (resultCode == RESULT_CANCELED) {
                 // Do nothing
             } else {
-                Log.d(LOG_TAG, "Unknown resultCode from sign in: " + String.valueOf(resultCode));
+                Log.e(LOG_TAG, "Unknown resultCode from auth required: " + String.valueOf(resultCode));
             }
         }
     }
@@ -113,9 +107,10 @@ public class MainActivity extends AppCompatActivity {
             public void done(ParseException e) {
                 updateLoginStateUI();
                 if (e != null) {
-                    Log.d(LOG_TAG, "onLoginClicked, could not log out: " + e.getMessage());
+                    Log.d(LOG_TAG, "onLoginClicked, could not log out: " + e.toString());
                 }
-                AmberApplication.startSignInActivityForResult(MainActivity.this, 1);
+                AmberApplication.startSignInActivityForResult(MainActivity.this,
+                        AmberApplication.RC_LOG_IN_BUTTON_CLICKED);
             }
         });
     }
@@ -172,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void done(ParseUser loggedInUser, ParseException e) {
                         if (e != null) {
-                            Log.d(LOG_TAG, "Anonymous login failed.");
+                            Log.e(LOG_TAG, "Anonymous login failed: " + e.toString());
                         } else {
                             if (role != null) {
                                 saveRoleAndStartActivity(loggedInUser, role);
@@ -192,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             if (sessionId == null) {
                 // Avoid "invalid session token" errors
-                Log.d(LOG_TAG, "validateUser: No session token for user " + userId +
+                Log.i(LOG_TAG, "validateUser: No session token for user " + userId +
                         ", auth=" + String.valueOf(authenticated) +
                         " - logging out");
 
@@ -204,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
                     public void done(ParseException e) {
                         updateLoginStateUI();
                         if (e != null) {
-                            Log.d(LOG_TAG, "validateUser, could not log out: " + e.getMessage());
+                            Log.e(LOG_TAG, "validateUser, could not log out: " + e.toString());
                         }
                     }
                 });
@@ -214,14 +209,15 @@ public class MainActivity extends AppCompatActivity {
                     // Returning non-anonymous user without a session
                     if (role != null) {
                         // Get started button was clicked
-                        Log.d(LOG_TAG, "validateUser: Unauthenticated user " + userId +
+                        Log.i(LOG_TAG, "validateUser: Unauthenticated user " + userId +
                                 ", auth=false" +
                                 " - require log in");
-
-                        // LoginState UI will set in askUserToLogIn method
-                        askUserToLogIn();
+                        AmberApplication.askUserToSignIn(this,
+                                AmberApplication.RC_USER_REQUIRES_AUTHENTICATION,
+                                R.string.login_required_existing_message,
+                                mLayout, R.string.logInCanceled);
                     } else {
-                        Log.d(LOG_TAG, "validateUser: Unauthenticated user " + userId +
+                        Log.i(LOG_TAG, "validateUser: Unauthenticated user " + userId +
                                 ", auth=" + String.valueOf(authenticated) +
                                 " - no action taken");
                     }
@@ -259,50 +255,25 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void askUserToLogIn() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.login_required_existing_message)
-                .setTitle(R.string.login_required_title)
-                .setPositiveButton(R.string.com_parse_ui_parse_login_button_label, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-
-                        // User clicked OK button
-                        AmberApplication.startSignInActivityForResult(MainActivity.this, 2);
-                    }
-                })
-                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-
-                        // User cancelled the dialog
-                        showSnack("Log in canceled");
-                    }
-                });
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
     private void startActivityForRole(String role) {
         if (role == null) {
             ParseUser user = ParseUser.getCurrentUser();
             if (user == null) {
-                Log.d(LOG_TAG, "startActivityForRole(null): No current user");
+                Log.e(LOG_TAG, "startActivityForRole(null): No current user");
             } else {
                 role = user.getString("role");
                 if (role == null) {
-                    Log.d(LOG_TAG, "startActivityForRole(null): No role for user " + user.getObjectId());
+                    Log.e(LOG_TAG, "startActivityForRole(null): No role for user " + user.getObjectId());
                 }
             }
-            Log.d(LOG_TAG, "startActivityForRole(null): user.role=" + role);
-        } else {
-            Log.d(LOG_TAG, "startActivityForRole " + role);
         }
         if (role != null) {
             if (role.equals("rider")) {
-                Log.d(LOG_TAG, "Starting rider map activity");
+                Log.i(LOG_TAG, "Starting rider map activity");
                 Intent riderMapIntent = new Intent(getApplicationContext(), RiderMapActivity.class);
                 startActivity(riderMapIntent);
             } else if (role.equals("driver")) {
-                Log.d(LOG_TAG, "Starting driver requests activity");
+                Log.i(LOG_TAG, "Starting driver requests activity");
                 Intent driverRequestsIntent = new Intent(getApplicationContext(), DriverRequestsActivity.class);
                 startActivity(driverRequestsIntent);
             }

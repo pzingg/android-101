@@ -21,12 +21,10 @@
 
 package com.gnatware.amber;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,111 +33,88 @@ import android.widget.TextView;
 import com.parse.ParseException;
 import com.parse.ParseUser;
 import com.parse.RequestPasswordResetCallback;
-import com.parse.ui.ParseLoginConfig;
-import com.parse.ui.ParseOnLoadingListener;
 
 /**
  * Fragment for the login help screen for resetting the user's password.
  */
-public class LoginHelpFragment extends LoginFragmentBase implements OnClickListener {
+public class LoginHelpFragment extends LoginFragmentBase implements View.OnClickListener {
 
-  private static final String LOG_TAG = "LoginHelpFragment";
+    private static final String LOG_TAG = "LoginHelpFragment";
 
-  private ParseLoginConfig config;
+    // View widgets
+    private TextView mTxtInstructions;
+    private EditText mEdtEmailAddress;
+    private Button mBtnSubmit;
 
-  private LoginFragmentListener mLoginFragmentListener;
-  private ParseOnLoadingListener mLoadingListener;
+    private boolean mEmailSent = false;
 
-  private View mLayout;
-
-  private TextView instructionsTextView;
-  private EditText emailField;
-  private Button submitButton;
-  private boolean emailSent = false;
-
-  public static LoginHelpFragment newInstance(Bundle configOptions) {
-    LoginHelpFragment loginHelpFragment = new LoginHelpFragment();
-    loginHelpFragment.setArguments(configOptions);
-    return loginHelpFragment;
-  }
-
-  @Override
-  public View onCreateView(LayoutInflater inflater, ViewGroup parent,
-                           Bundle savedInstanceState) {
-    config = ParseLoginConfig.fromBundle(getArguments(), getActivity());
-
-    View v = inflater.inflate(R.layout.com_parse_ui_parse_login_help_fragment,
-        parent, false);
-    instructionsTextView = (TextView) v
-        .findViewById(R.id.login_help_instructions);
-    emailField = (EditText) v.findViewById(R.id.login_help_email_input);
-    submitButton = (Button) v.findViewById(R.id.login_help_submit);
-
-    submitButton.setOnClickListener(this);
-    return v;
-  }
-
-  @Override
-  public void onAttach(Context context) {
-    super.onAttach(context);
-
-    if (context instanceof LoginFragmentListener) {
-      mLoginFragmentListener = (LoginFragmentListener) context;
-    } else {
-      throw new IllegalArgumentException(
-              "Activity must implemement ParseLoginFragmentListener");
+    public static LoginHelpFragment newInstance(Bundle configOptions) {
+        LoginHelpFragment loginHelpFragment = new LoginHelpFragment();
+        loginHelpFragment.setArguments(configOptions);
+        return loginHelpFragment;
     }
-    if (context instanceof ParseOnLoadingListener) {
-      mLoadingListener = (ParseOnLoadingListener) context;
-    } else {
-      throw new IllegalArgumentException(
-              "Activity must implemement ParseOnLoadingListener");
+
+    @Override
+    public View onCreateView(LayoutInflater inflater,
+                           ViewGroup container, Bundle savedInstanceState) {
+
+        // Inflate the layout for this fragment and create ParseLoginConfig object
+        initConfigAndView(inflater, container, R.layout.com_parse_ui_parse_login_help_fragment);
+
+        mTxtInstructions = (TextView) mLayout.findViewById(R.id.login_help_instructions);
+        mEdtEmailAddress = (EditText) mLayout.findViewById(R.id.login_help_email_input);
+        mBtnSubmit = (Button) mLayout.findViewById(R.id.login_help_submit);
+
+        mBtnSubmit.setOnClickListener(this);
+
+        return mLayout;
     }
-  }
 
-  @Override
-  public void onClick(View v) {
-    if (!emailSent) {
-      String email = emailField.getText().toString();
-      if (email.length() == 0) {
-        showSnack(R.string.com_parse_ui_no_email_toast);
-      } else {
-        loadingStart();
-        ParseUser.requestPasswordResetInBackground(email,
-            new RequestPasswordResetCallback() {
-              @Override
-              public void done(ParseException e) {
-                if (isActivityDestroyed()) {
-                  return;
-                }
+    // View.OnClickListener method (submit button clicked)
+    @Override
+    public void onClick(View v) {
+        if (!mEmailSent) {
+            String email = mEdtEmailAddress.getText().toString();
+            if (email.length() == 0) {
+                showSnack(R.string.com_parse_ui_no_email_toast);
+        } else {
+            loadingStart();
+            ParseUser.requestPasswordResetInBackground(email,
+                new RequestPasswordResetCallback() {
 
-                loadingFinish();
-                if (e == null) {
-                  instructionsTextView
-                      .setText(R.string.com_parse_ui_login_help_email_sent);
-                  emailField.setVisibility(View.INVISIBLE);
-                  submitButton
-                      .setText(R.string.com_parse_ui_login_help_login_again_button_label);
-                  emailSent = true;
-                } else {
-                  Log.d(LOG_TAG, getString(R.string.com_parse_ui_login_warning_password_reset_failed) +
+                @Override
+                public void done(ParseException e) {
+                    if (isActivityDestroyed()) {
+                        Log.e(LOG_TAG, "Activity was destroyed during password reset");
+                        return;
+                    }
+
+                    loadingFinish();
+                    if (e == null) {
+                        mTxtInstructions.setText(
+                                R.string.com_parse_ui_login_help_email_sent);
+                        mEdtEmailAddress.setVisibility(View.INVISIBLE);
+                        mBtnSubmit.setText(R.string.com_parse_ui_login_help_login_again_button_label);
+                        mEmailSent = true;
+                    } else {
+                        Log.e(LOG_TAG, getString(R.string.com_parse_ui_login_warning_password_reset_failed) +
                           e.toString());
-                  if (e.getCode() == ParseException.INVALID_EMAIL_ADDRESS ||
-                      e.getCode() == ParseException.EMAIL_NOT_FOUND) {
-                    showSnack(R.string.com_parse_ui_invalid_email_toast);
-                  } else {
-                    showSnack(R.string.com_parse_ui_login_help_submit_failed_unknown);
-                  }
-                }
-              }
-            });
-      }
-    } else {
-      mLoginFragmentListener.onLoginHelpSuccess();
+                        if (e.getCode() == ParseException.INVALID_EMAIL_ADDRESS ||
+                            e.getCode() == ParseException.EMAIL_NOT_FOUND) {
+                                showSnack(R.string.com_parse_ui_invalid_email_toast);
+                            } else {
+                                showSnack(R.string.com_parse_ui_login_help_submit_failed_unknown);
+                            }
+                        }
+                    }
+                });
+            }
+        } else {
+            mLoginFragmentListener.onLoginHelpSuccess();
+        }
     }
-  }
 
-  // LoginFragmentBase method
-  @Override
-  protected String getLogTag() { return LOG_TAG; }
+    // LoginFragmentBase method
+    @Override
+    protected String getLogTag() { return LOG_TAG; }
 }

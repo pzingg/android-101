@@ -4,7 +4,6 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
@@ -15,7 +14,6 @@ import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -32,7 +30,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.parse.FindCallback;
 import com.parse.ParseACL;
-import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
@@ -54,20 +51,18 @@ public class RiderMapActivity extends AppCompatActivity implements
     public static final Integer REQUEST_NONE = 0;
     public static final Integer REQUEST_ACTIVE = 1;
     public static final Integer REQUEST_ASSIGNED = 2;
-    private static final String[] REQUEST_STATES = {
-            "NONE", "ACTIVE", "ASSIGNED"
-    };
+    private static final String[] REQUEST_STATES = { "NONE", "ACTIVE", "ASSIGNED" };
 
     private AmberApplication mApplication;
     private RequestStatusReceiver mStatusReceiver;
     private PendingIntent mStatusAlarmIntent;
-    private boolean mUsingAlarm;
+    private boolean mUsingAlarm = false;
 
     // Dynamic UI elements
     private FloatingActionButton mFab;
     private CoordinatorLayout mLayout;
 
-    private boolean mLayoutComplete;
+    private boolean mLayoutComplete = false;
 
     // Current rider request status
     private String mRequestId;
@@ -115,7 +110,7 @@ public class RiderMapActivity extends AppCompatActivity implements
     // Handle the result of a getRequestStatus service
     public class RequestStatusReceiver extends BroadcastReceiver {
 
-        private static final String TAG = "RequestStatusReceiver";
+        private static final String TAG = "RSReceiver";
 
         public RequestStatusReceiver() {
         }
@@ -157,7 +152,6 @@ public class RiderMapActivity extends AppCompatActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(LOG_TAG, "onCreate");
 
         initializeState();
     }
@@ -166,7 +160,6 @@ public class RiderMapActivity extends AppCompatActivity implements
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(LOG_TAG, "onPause");
 
         cancelRequestStatusAlarm();
         mApplication.removeLocationUpdates(this);
@@ -175,7 +168,6 @@ public class RiderMapActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(LOG_TAG, "onResume");
 
         mApplication.requestLocationUpdates(this);
         scheduleRequestStatusAlarm("onResume");
@@ -200,11 +192,9 @@ public class RiderMapActivity extends AppCompatActivity implements
     // ViewTreeObserver.OnGlobalLayoutListener method
     @Override
     public void onGlobalLayout() {
-        Log.d(LOG_TAG, "onGlobalLayout");
 
         // At this point, the UI is fully displayed
         mLayoutComplete = true;
-
         updateRiderLocation(null);
     }
 
@@ -215,34 +205,18 @@ public class RiderMapActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
+    public void onStatusChanged(String provider, int status, Bundle extras) { }
 
     @Override
-    public void onProviderEnabled(String provider) {
-
-    }
+    public void onProviderEnabled(String provider) { }
 
     @Override
-    public void onProviderDisabled(String provider) {
-
-    }
+    public void onProviderDisabled(String provider) { }
 
     // GoogleMap OnMapReadyCallback method
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
         updateRiderLocation(null);
     }
 
@@ -349,62 +323,48 @@ public class RiderMapActivity extends AppCompatActivity implements
 
     private void postRequest() {
         Log.d(LOG_TAG, "postRequest");
-        ParseUser requester = ParseUser.getCurrentUser();
-        if (requester == null) {
-            Log.d(LOG_TAG, "No user");
-        } else if (ParseAnonymousUtils.isLinked(requester)) {
 
-            // You can convert an anonymous user into a regular user by setting
-            // the username and password, then calling signUp(), or by logging in or
-            // linking with a service like Facebook or Twitter. The converted user will
-            // retain all of its data. To determine whether the current user is an
-            // anonymous user, you can check ParseAnonymousUtils.isLinked()
-
-            // App Settings note: If we currently have a saved anonymous user, and the
-            // user creates a new account through the Parse sign up UI, it's important that
-            // we DISABLE "Revoke session on password change" in the Users > User Sessions
-            // area of App Settings for the application on parse.com.
-            // The sign up process changes two fields on the user:
-            //     The authData field, previously '{"anonymous":...}', is now null, and
-            //     The password field is changed from a random one to the new (encrypted) password.
-            // Unless the "Revoke session" setting is disabled, the password change
-            // will remove the session, and the next Parse query we run will fail with an
-            // "invalid session token" exception, requiring a log out and log in.
-            Log.d(LOG_TAG, "Anonymous user - require sign up");
-            askUserToSignIn(1);
-        } else if (!requester.isAuthenticated()) {
-            Log.d(LOG_TAG, "Unauthenticated user - require log in");
-            askUserToSignIn(1);
-        } else {
-            // Drivers and requesters all need to see requests
-            ParseACL acl = new ParseACL();
-            acl.setPublicReadAccess(true);
-            acl.setPublicWriteAccess(true);
-
-            ParseGeoPoint pickupLocation = new ParseGeoPoint(
-                    mRiderLocation.latitude, mRiderLocation.longitude);
-
-            final ParseObject request = new ParseObject("Request");
-            request.setACL(acl);
-            request.put("requester", requester);
-            request.put("pickupLocation", pickupLocation);
-            request.put("requestedAt", new Date());
-
-            Log.d(LOG_TAG, "Posting request for user " + requester.getObjectId() +
-                    " at " + pickupLocation.toString());
-            request.saveInBackground(new SaveCallback() {
-
-                @Override
-                public void done(ParseException e) {
-                    String status = null;
-                    if (e != null) {
-                        Log.d(LOG_TAG, "Error posting request: " + e.getMessage());
-                        status = "Error posting request!";
-                    }
-                    updateRequestStateUI(status);
-                }
-            });
+        if (mRiderLocation == null) {
+            showSnack("Unable to get your location - sorry!");
+            return;
         }
+
+        // If user is anonymous or not authenticated, show dialog
+        ParseUser requester = ParseUser.getCurrentUser();
+        if (!AmberApplication.validUserOrRequestSignIn(requester,
+                this, R.string.login_required_anonymous_message,
+                mLayout, R.string.postRequestNotAuthorized)) {
+            return;
+        }
+
+        // Drivers and requesters all need to see requests
+        ParseACL acl = new ParseACL();
+        acl.setPublicReadAccess(true);
+        acl.setPublicWriteAccess(true);
+
+        ParseGeoPoint pickupLocation = new ParseGeoPoint(
+                mRiderLocation.latitude, mRiderLocation.longitude);
+
+        final ParseObject request = new ParseObject("Request");
+        request.setACL(acl);
+        request.put("requester", requester);
+        request.put("pickupLocation", pickupLocation);
+        request.put("requestedAt", new Date());
+
+        Log.d(LOG_TAG, "Posting request for user " + requester.getObjectId() +
+                " at " + pickupLocation.toString());
+        request.saveInBackground(new SaveCallback() {
+
+            @Override
+            public void done(ParseException e) {
+                String status = null;
+                if (e != null) {
+                    Log.d(LOG_TAG, "Error posting request: " + e.getMessage());
+                    status = "Error posting request!";
+                }
+                updateRequestStateUI(status);
+            }
+        });
     }
 
     private void cancelRequest() {
@@ -524,27 +484,5 @@ public class RiderMapActivity extends AppCompatActivity implements
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mStatusReceiver);
     }
 
-    private void askUserToSignIn(final int requestCode) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.login_required_anonymous_message)
-                .setTitle(R.string.login_required_title)
-                .setPositiveButton("Sign in", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // User clicked OK button
-                        Log.d(LOG_TAG, "User clicked OK to sign in");
-                        AmberApplication.startSignInActivityForResult(
-                                RiderMapActivity.this, requestCode);
-                    }
-                })
-                .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // User cancelled the dialog
-
-                        showSnack("Request was not posted");
-                    }
-                });
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
 }
 

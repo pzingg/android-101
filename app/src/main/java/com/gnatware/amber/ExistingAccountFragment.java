@@ -12,7 +12,6 @@ import android.widget.TextView;
 import com.parse.LogInCallback;
 import com.parse.ParseException;
 import com.parse.ParseUser;
-import com.parse.ui.ParseLoginConfig;
 
 import junit.framework.Assert;
 
@@ -22,17 +21,18 @@ import junit.framework.Assert;
  * Use the {@link ExistingAccountFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class ExistingAccountFragment extends LoginFragmentBase {
+public class ExistingAccountFragment extends LoginFragmentBase implements View.OnClickListener {
 
     private static final String LOG_TAG = "ExistingAccountFragment";
 
-    private String mEmailAddress;
-
+    // View widgets
     private TextView mTxtEmailAddress;
     private EditText mEdtPassword;
     private Button mBtnCancel;
     private Button mBtnSignIn;
     private TextView mBtnForgotPassword;
+
+    private String mEmailAddress;
 
     public ExistingAccountFragment() {
         // Required empty public constructor
@@ -55,16 +55,14 @@ public class ExistingAccountFragment extends LoginFragmentBase {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        Bundle arguments = getArguments();
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+
+        // Inflate the layout for this fragment and create ParseLoginConfig object
+        Bundle arguments = initConfigAndView(inflater, container, R.layout.fragment_existing_account);
+
         mEmailAddress = arguments.getString(SignInActivity.EMAIL_ADDRESS);
         Assert.assertNotNull(mEmailAddress);
-
-        mParseLoginConfig = ParseLoginConfig.fromBundle(arguments, getActivity());
-        Assert.assertTrue(mParseLoginConfig.isParseLoginEmailAsUsername());
-
-        mLayout = inflater.inflate(R.layout.fragment_existing_account, container, false);
 
         mTxtEmailAddress = (TextView) mLayout.findViewById(R.id.txtEmailAddress);
         mEdtPassword = (EditText) mLayout.findViewById(R.id.edtPassword);
@@ -81,61 +79,59 @@ public class ExistingAccountFragment extends LoginFragmentBase {
     @Override
     protected String getLogTag() { return LOG_TAG; }
 
+    // View.OnClickListener method (sign in button clicked)
+    @Override
+    public void onClick(View v) {
+        String password = mEdtPassword.getText().toString();
+
+        if (password.length() == 0) {
+            showSnack(R.string.com_parse_ui_no_password_toast);
+        } else {
+            loadingStart(true);
+            ParseUser.logInInBackground(mEmailAddress, password, new LogInCallback() {
+
+                @Override
+                public void done(ParseUser user, ParseException e) {
+                    if (isActivityDestroyed()) {
+                        Log.e(LOG_TAG, "Activity was destroyed during log in");
+                        return;
+                    }
+
+                    loadingFinish();
+                    if (user != null) {
+                        Log.d(LOG_TAG, "Account " + user.getObjectId() + " logged in for " + mEmailAddress);
+                        loginSuccess(user);
+                    } else if (e != null) {
+                        if (e.getCode() == ParseException.OBJECT_NOT_FOUND) {
+                            if (mParseLoginConfig.getParseLoginInvalidCredentialsToastText() != null) {
+                                showSnack(mParseLoginConfig.getParseLoginInvalidCredentialsToastText());
+                            } else {
+                                showSnack("Invalid credentials");
+                            }
+                            mEdtPassword.selectAll();
+                            mEdtPassword.requestFocus();
+                        } else {
+                            Log.e(LOG_TAG, "Error logging in " + mEmailAddress + ": " + e.toString());
+                            showSnack(R.string.com_parse_ui_parse_login_failed_unknown_toast);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
     // Private methods
     private void setUpView() {
         mTxtEmailAddress.setText(mEmailAddress);
 
-        mBtnSignIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String password = mEdtPassword.getText().toString();
-
-                if (password.length() == 0) {
-                    showSnack(R.string.com_parse_ui_no_password_toast);
-                } else {
-                    loadingStart(true);
-                    ParseUser.logInInBackground(mEmailAddress, password, new LogInCallback() {
-
-                        @Override
-                        public void done(ParseUser user, ParseException e) {
-                            if (isActivityDestroyed()) {
-                                return;
-                            }
-
-                            loadingFinish();
-                            if (user != null) {
-                                Log.d(LOG_TAG, "Account " + user.getObjectId() + " logged in for " + mEmailAddress);
-                                loginSuccess();
-                            } else if (e != null) {
-                                Log.d(LOG_TAG,
-                                        getString(R.string.com_parse_ui_login_warning_parse_login_failed) +
-                                                e.toString());
-                                if (e.getCode() == ParseException.OBJECT_NOT_FOUND) {
-                                    if (mParseLoginConfig.getParseLoginInvalidCredentialsToastText() != null) {
-                                        showSnack(mParseLoginConfig.getParseLoginInvalidCredentialsToastText());
-                                    } else {
-                                        showSnack("Invalid credentials");
-                                    }
-                                    mEdtPassword.selectAll();
-                                    mEdtPassword.requestFocus();
-                                } else {
-                                    Log.d(LOG_TAG, "Error logging in " + mEmailAddress + ": " + e.getMessage());
-                                    showSnack(R.string.com_parse_ui_parse_login_failed_unknown_toast);
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-        });
-
         mBtnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(LOG_TAG, "User canceled existing account sign-in");
                 mLoginFragmentListener.onBackClicked();
             }
         });
+
+        mBtnSignIn.setOnClickListener(this);
 
         if (mParseLoginConfig.getParseLoginHelpText() != null) {
             mBtnForgotPassword.setText(mParseLoginConfig.getParseLoginHelpText());
@@ -149,7 +145,7 @@ public class ExistingAccountFragment extends LoginFragmentBase {
         });
     }
 
-    private void loginSuccess() {
-        mLoginFragmentListener.onLoginSuccess();
+    private void loginSuccess(ParseUser user) {
+        mLoginFragmentListener.onLoginSuccess(user);
     }
 }

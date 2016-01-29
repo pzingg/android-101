@@ -4,6 +4,8 @@ package com.gnatware.amber;
  * Created by pzingg on 1/25/16.
  */
 
+import com.parse.ParseUser;
+
 /**
  * This interface must be implemented by activities that contain this
  * fragment to allow an interaction in this fragment to be communicated
@@ -20,7 +22,7 @@ public interface LoginFragmentListener {
     public void onBackClicked();
     public void onCancelClicked();
     public void onLoginHelpClicked();
-    public void onLoginSuccess();
     public void onLoginHelpSuccess();
-    public void onCreateAccountSuccess();
+    public void onLoginSuccess(ParseUser user);
+    public void onCreateAccountSuccess(ParseUser user);
 }

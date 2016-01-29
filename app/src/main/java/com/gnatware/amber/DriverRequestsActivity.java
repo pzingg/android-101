@@ -26,24 +26,18 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate");
-
         initializeState();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause");
-
         mApplication.removeLocationUpdates(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume");
-
         mApplication.requestLocationUpdates(this);
         updateDriverLocation(null);
     }
@@ -51,24 +45,17 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
     // LocationListener methods
     @Override
     public void onLocationChanged(Location location) {
-
         updateDriverLocation(location);
     }
 
     @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
+    public void onStatusChanged(String provider, int status, Bundle extras) { }
 
     @Override
-    public void onProviderEnabled(String provider) {
-
-    }
+    public void onProviderEnabled(String provider) { }
 
     @Override
-    public void onProviderDisabled(String provider) {
-
-    }
+    public void onProviderDisabled(String provider) { }
 
     // Public methods
 
@@ -119,12 +106,13 @@ public class DriverRequestsActivity extends AppCompatActivity implements Locatio
         if (location == null) {
             location = mApplication.getLastKnownLocation();
             if (location == null) {
-                Log.d(TAG, "No location");
-                return;
+                Log.e(TAG, "updateDriverLocation: No location available");
             }
         }
-        mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        mApplication.updateDriverLocation(mDriverLocation);
-        mRequestsAdapter.updateDriverLocation(mDriverLocation);
+        if (location != null) {
+            mDriverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            mApplication.updateDriverLocation(mDriverLocation);
+            mRequestsAdapter.updateDriverLocation(mDriverLocation);
+        }
     }
 }

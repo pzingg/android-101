@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 
 import com.parse.ParseFacebookUtils;
+import com.parse.ParseUser;
 import com.parse.ui.ParseOnLoadingListener;
 
 /*
@@ -187,10 +188,13 @@ public class SignInActivity extends AppCompatActivity implements
      * Called when the user successfully logs in to an existing account.
      */
     @Override
-    public void onLoginSuccess() {
+    public void onLoginSuccess(ParseUser user) {
         Log.d(LOG_TAG, "onLoginSuccess");
 
-        setResult(RESULT_ACCOUNT_SIGNED_IN);
+        Intent data = new Intent();
+        data.putExtra("userId", user.getObjectId());
+        data.putExtra("authData", user.getString("authData"));
+        setResult(RESULT_ACCOUNT_SIGNED_IN, data);
         finish();
     }
 
@@ -198,10 +202,13 @@ public class SignInActivity extends AppCompatActivity implements
      * Called when the user successfully creates a new account.
      */
     @Override
-    public void onCreateAccountSuccess() {
+    public void onCreateAccountSuccess(ParseUser user) {
         Log.d(LOG_TAG, "onCreateAccountSuccess");
 
-        setResult(RESULT_ACCOUNT_CREATED);
+        Intent data = new Intent();
+        data.putExtra("userId", user.getObjectId());
+        data.putExtra("authData", user.getString("authData"));
+        setResult(RESULT_ACCOUNT_CREATED, data);
         finish();
     }
 

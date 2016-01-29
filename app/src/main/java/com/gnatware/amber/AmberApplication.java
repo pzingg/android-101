@@ -2,18 +2,23 @@ package com.gnatware.amber;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.support.design.widget.Snackbar;
 import android.support.multidex.MultiDexApplication;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.View;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.parse.FindCallback;
 import com.parse.Parse;
 import com.parse.ParseACL;
+import com.parse.ParseAnonymousUtils;
 import com.parse.ParseException;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
@@ -36,6 +41,10 @@ import java.util.List;
 public class AmberApplication extends MultiDexApplication {
 
     public static final String LOG_TAG = "AmberApplication";
+
+    public static final int RC_LOG_IN_BUTTON_CLICKED = 1001;
+    public static final int RC_USER_REQUIRES_AUTHENTICATION = 1002;
+    public static final int RC_ACTION_REQUIRES_AUTHENTICATION = 1003;
 
     private LocationManager mLocationManager;
     private String mProvider;
@@ -69,14 +78,82 @@ public class AmberApplication extends MultiDexApplication {
         Intent signInIntent = new Intent(from, SignInActivity.class);
         signInIntent.putExtras(config.toBundle());
 
+        Log.d(LOG_TAG, "starting SignInActivity with requestCode " + String.valueOf(requestCode));
         from.startActivityForResult(signInIntent, requestCode);
-        Log.d(LOG_TAG, "signInActivityStarted");
+    }
+
+    static public void askUserToSignIn(
+            final Activity from, final int requestCode,
+            final int dialogMessageId, final View snackContainer, final int cancelMessageId) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(from);
+        builder.setMessage(dialogMessageId)
+            .setTitle(R.string.login_required_title)
+            .setPositiveButton("Sign in", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    startSignInActivityForResult(from, requestCode);
+                }
+            });
+
+        if (snackContainer != null && cancelMessageId != 0) {
+            builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+
+                    // User cancelled the dialog - show cancel message
+                    Snackbar snackbar = Snackbar.make(snackContainer, cancelMessageId,
+                            Snackbar.LENGTH_LONG);
+                    snackbar.show();
+                }
+            });
+        }
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    static public boolean validUserOrRequestSignIn(
+            ParseUser user, Activity from, int dialogMessageId,
+            final View snackContainer, int cancelMessageId) {
+        if (user == null) {
+            Log.d(LOG_TAG, "No user");
+            return false;
+        }
+
+        int requestCode = 0;
+        boolean valid = false;
+        if (ParseAnonymousUtils.isLinked(user)) {
+            // You can convert an anonymous user into a regular user by setting
+            // the username and password, then calling signUp(), or by logging in or
+            // linking with a service like Facebook or Twitter. The converted user will
+            // retain all of its data. To determine whether the current user is an
+            // anonymous user, you can check ParseAnonymousUtils.isLinked()
+
+            // App Settings note: If we currently have a saved anonymous user, and the
+            // user creates a new account through the Parse sign up UI, it's important that
+            // we DISABLE "Revoke session on password change" in the Users > User Sessions
+            // area of App Settings for the application on parse.com.
+            // The sign up process changes two fields on the user:
+            //     The authData field, previously '{"anonymous":...}', is now null, and
+            //     The password field is changed from a random one to the new (encrypted) password.
+            // Unless the "Revoke session" setting is disabled, the password change
+            // will remove the session, and the next Parse query we run will fail with an
+            // "invalid session token" exception, requiring a log out and log in.
+            Log.d(LOG_TAG, "Anonymous user - require sign up");
+            requestCode = RC_ACTION_REQUIRES_AUTHENTICATION;
+        } else if (!user.isAuthenticated()) {
+            Log.d(LOG_TAG, "Unauthenticated user - require log in");
+            requestCode = RC_USER_REQUIRES_AUTHENTICATION;
+        } else {
+            valid = true;
+        }
+        if (!valid) {
+            askUserToSignIn(from, requestCode, dialogMessageId, snackContainer, cancelMessageId);
+        }
+        return valid;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(LOG_TAG, "onCreate");
 
         // Check our keys
         assertGoogleMapsKey();
@@ -103,22 +180,22 @@ public class AmberApplication extends MultiDexApplication {
     }
 
     public void removeLocationUpdates(LocationListener listener) {
+
         // Updates every 400 ms, or 1 degree change
-        Log.d(LOG_TAG, "Removing location updates for listener " + listener);
         try {
             mLocationManager.removeUpdates(listener);
         } catch (SecurityException e) {
-            Log.e(LOG_TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "removeLocationUpdates: Location permission not granted");
         }
     }
 
     public void requestLocationUpdates(LocationListener listener) {
+
         // Updates every 400 ms, or 1 degree change
-        Log.d(LOG_TAG, "Requesting location updates for listener " + listener + " with provider " + mProvider);
         try {
             mLocationManager.requestLocationUpdates(mProvider, 400, 1, listener);
         } catch (SecurityException e) {
-            Log.e(LOG_TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "requestLocationUpdates: Location permission not granted");
         }
     }
 
@@ -127,7 +204,7 @@ public class AmberApplication extends MultiDexApplication {
         try {
             location = mLocationManager.getLastKnownLocation(mProvider);
         } catch (SecurityException e) {
-            Log.e(LOG_TAG, "Location permission not granted");
+            Log.e(LOG_TAG, "getLastKnownLocation: Location permission not granted");
         }
         return location;
     }
@@ -146,12 +223,11 @@ public class AmberApplication extends MultiDexApplication {
     public void updateDriverLocation(LatLng location) {
         ParseUser driver = ParseUser.getCurrentUser();
         if (driver != null && driver.getString("role") == "driver") {
-            Log.d(LOG_TAG, "updateDriverLocation: Saving driver location");
             driver.put("lastLocation", new ParseGeoPoint(location.latitude, location.longitude));
             driver.put("lastLocationAt", new Date());
             driver.saveEventually();
         } else {
-            Log.d(LOG_TAG, "updateDriverLocation: Current user is not a driver");
+            Log.e(LOG_TAG, "updateDriverLocation: Current user is not a driver");
         }
     }
 

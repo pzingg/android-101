@@ -5,14 +5,19 @@ package com.gnatware.amber;
  */
 
 import android.content.Context;
+import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 
 import com.parse.ui.ParseLoginConfig;
 import com.parse.ui.ParseOnLoadingListener;
+
+import junit.framework.Assert;
 
 /**
  * Activities that contain this fragment must implement the
@@ -23,10 +28,8 @@ import com.parse.ui.ParseOnLoadingListener;
 public abstract class LoginFragmentBase extends Fragment {
 
     protected ParseLoginConfig mParseLoginConfig;
-
     protected LoginFragmentListener mLoginFragmentListener;
     protected ParseOnLoadingListener mLoadingListener;
-
     protected View mLayout;
 
     @Override
@@ -38,13 +41,13 @@ public abstract class LoginFragmentBase extends Fragment {
             mLoginFragmentListener = (LoginFragmentListener) context;
         } else {
             throw new IllegalArgumentException(
-                    "Activity must implemement ParseLoginFragmentListener");
+                    "Activity must implement ParseLoginFragmentListener");
         }
         if (context instanceof ParseOnLoadingListener) {
             mLoadingListener = (ParseOnLoadingListener) context;
         } else {
             throw new IllegalArgumentException(
-                    "Activity must implemement ParseOnLoadingListener");
+                    "Activity must implement ParseOnLoadingListener");
         }
     }
 
@@ -55,6 +58,16 @@ public abstract class LoginFragmentBase extends Fragment {
 
         mLoginFragmentListener = null;
         mLoadingListener = null;
+    }
+
+    protected Bundle initConfigAndView(LayoutInflater inflater, ViewGroup container, int layoutId) {
+        mLayout = inflater.inflate(layoutId, container, false);
+
+        Bundle arguments = getArguments();
+        mParseLoginConfig = ParseLoginConfig.fromBundle(arguments, getActivity());
+        Assert.assertTrue(mParseLoginConfig.isParseLoginEmailAsUsername());
+
+        return arguments;
     }
 
     protected void showSnack(int resId) {

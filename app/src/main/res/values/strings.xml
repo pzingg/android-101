@@ -11,4 +11,6 @@
     <string name="login_required_existing_message">Welcome, returning user! Please log in to continue.</string>
     <string name="login_required_title">Account sign-in required</string>
     <string name="cancel">Cancel</string>
+    <string name="postRequestNotAuthorized">Request was not posted</string>
+    <string name="logInCanceled">Sign-in was canceled</string>
 </resources>
